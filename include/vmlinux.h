@@ -51810,6 +51810,7 @@ struct bpf_prog_ops {
 struct bpf_prog_pack {
 	struct list_head list;
 	void *ptr;
+	bool arch_flush_needed;
 	long unsigned int bitmap[0];
 };
 
@@ -69210,8 +69211,6 @@ struct drm_colorop {
 	struct drm_property *type_property;
 	struct drm_property *bypass_property;
 	uint32_t size;
-	enum drm_colorop_lut1d_interpolation_type lut1d_interpolation;
-	enum drm_colorop_lut3d_interpolation_type lut3d_interpolation;
 	struct drm_property *lut1d_interpolation_property;
 	struct drm_property *curve_1d_type_property;
 	struct drm_property *multiplier_property;
@@ -69229,6 +69228,8 @@ struct drm_colorop_state {
 	enum drm_colorop_curve_1d_type curve_1d_type;
 	uint64_t multiplier;
 	struct drm_property_blob *data;
+	enum drm_colorop_lut1d_interpolation_type lut1d_interpolation;
+	enum drm_colorop_lut3d_interpolation_type lut3d_interpolation;
 	struct drm_atomic_state *state;
 };
 
@@ -82320,15 +82321,19 @@ struct fscrypt_master_key {
 	struct callback_head mk_rcu_head;
 	struct fscrypt_master_key_secret mk_secret;
 	struct fscrypt_key_specifier mk_spec;
-	struct key *mk_users;
+	struct list_head mk_users;
 	struct list_head mk_decrypted_inodes;
 	spinlock_t mk_decrypted_inodes_lock;
-	struct fscrypt_prepared_key mk_direct_keys[11];
-	struct fscrypt_prepared_key mk_iv_ino_lblk_64_keys[11];
-	struct fscrypt_prepared_key mk_iv_ino_lblk_32_keys[11];
+	struct list_head mk_mode_keys;
 	siphash_key_t mk_ino_hash_key;
 	bool mk_ino_hash_key_initialized;
 	bool mk_present;
+};
+
+struct fscrypt_master_key_user {
+	struct list_head link;
+	kuid_t uid;
+	struct key *quota_key;
 };
 
 struct fscrypt_mode {
@@ -82341,6 +82346,14 @@ struct fscrypt_mode {
 	int logged_blk_crypto_native;
 	int logged_blk_crypto_fallback;
 	enum blk_crypto_mode_num blk_crypto_mode;
+};
+
+struct fscrypt_mode_key {
+	struct fscrypt_prepared_key key;
+	struct list_head link;
+	u8 hkdf_context;
+	u8 mode_num;
+	u8 data_unit_bits;
 };
 
 struct fscrypt_name {
@@ -95894,7 +95907,7 @@ struct iommufd_vevent {
 	struct iommufd_vevent_header header;
 	struct list_head node;
 	ssize_t data_len;
-	u64 event_data[0];
+	u8 event_data[0];
 };
 
 struct iommufd_veventq {
@@ -105805,6 +105818,7 @@ struct memcg_stock_pcp {
 	struct mem_cgroup *cached[7];
 	struct work_struct work;
 	long unsigned int flags;
+	uint8_t drain_idx;
 };
 
 struct memcg_vmstats {
@@ -120944,7 +120958,7 @@ struct pid {
 };
 
 union proc_op {
-	int (*proc_get_link)(struct dentry *, struct path *);
+	int (*proc_get_link)(struct dentry *, struct path *, struct task_struct *);
 	int (*proc_show)(struct seq_file *, struct pid_namespace *, struct pid *, struct task_struct *);
 	int lsmid;
 };
@@ -126973,6 +126987,7 @@ struct request {
 
 struct request_key_auth {
 	struct callback_head rcu;
+	refcount_t usage;
 	struct key *target_key;
 	struct key *dest_keyring;
 	const struct cred *cred;
@@ -129540,10 +129555,6 @@ struct rx_queue_attribute {
 	struct attribute attr;
 	ssize_t (*show)(struct netdev_rx_queue *, char *);
 	ssize_t (*store)(struct netdev_rx_queue *, const char *, size_t);
-};
-
-struct s {
-	__be32 conv;
 };
 
 struct s3_save {
@@ -139367,6 +139378,7 @@ struct tc_action {
 	struct tc_cookie *user_cookie;
 	struct tcf_chain *goto_chain;
 	u32 tcfa_flags;
+	struct callback_head tcfa_rcu;
 	u8 hw_stats;
 	u8 used_hw_stats;
 	bool used_hw_stats_valid;
@@ -140172,6 +140184,7 @@ struct tcp_ao_info {
 	u32 snd_sne;
 	u32 rcv_sne;
 	refcount_t refcnt;
+	struct callback_head rcu;
 };
 
 struct tcp_ao_info_opt {
@@ -152940,7 +152953,9 @@ struct uart_8250_port {
 	struct mctrl_gpios *gpios;
 	u16 lsr_saved_flags;
 	u16 lsr_save_mask;
+	bool console_line_ended;
 	unsigned char msr_saved_flags;
+	struct irq_work modem_status_work;
 	struct uart_8250_dma *dma;
 	const struct uart_8250_ops *ops;
 	u32 (*dl_read)(struct uart_8250_port *);
@@ -153098,6 +153113,7 @@ struct udmabuf {
 	long unsigned int nr_pinned;
 	struct folio **pinned_folios;
 	struct sg_table *sg;
+	enum dma_data_direction sg_dir;
 	struct miscdevice *device;
 	long unsigned int *offsets;
 };

