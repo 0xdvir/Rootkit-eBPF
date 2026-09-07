@@ -23,9 +23,6 @@ enum command_opcode {
 
     COMMAND_HIDE_FILE,
     COMMAND_UNHIDE_FILE,
-
-    COMMAND_HIDE_PORT,
-    COMMAND_UNHIDE_PORT,
 };
 
 struct command_packet {

