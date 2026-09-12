@@ -16,6 +16,8 @@ int hider_init(struct rootkit *skel);
 /**
  * @brief Loads a PID to the rootkit's map to hide it.
  * 
+ * Also hides all future childs of this process.
+ * 
  * @param pid 
  * @return int 
  */

