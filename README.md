@@ -9,7 +9,7 @@ A simple and educational eBPF rootkit designed for modern Linux kernels.
 - **Keylogger**
   Kernel level keylogger capturing keyboard input and seding over hidden communication.
 - **Process and File Hiding**
-  Hiding processes from ps and hiding files on the file system.
+  Hiding processes recursively on every fork. Also, hiding files on the file system.
 - **Evasion Techniques**
   Utilizes fundamental strategies to avoid detection.
 - **Reverse Shell**

