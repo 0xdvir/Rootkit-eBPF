@@ -61,8 +61,7 @@ sudo su
 
 ## Usage
 
-- A controller script (`controller/controller.py`, written in Python 3) is provided to run on the attacker’s machine and interact with the rootkit’s backdoor functionality.
-- Everything is configurable in `config.h` and `userspace/config.h`.
+A controller script (`controller/controller.py`, written in Python 3) is provided to run on the attacker’s machine and interact with the rootkit’s backdoor functionality.
 
 ### Example Usage
 ```bash
