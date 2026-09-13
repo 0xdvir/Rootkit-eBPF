@@ -30,12 +30,9 @@ int BPF_KPROBE(trace_input_event, struct input_dev *dev, unsigned int type, unsi
     if (!event)
         return 0;
 
-    /* Collect process context and keycode */
-    u64 pid_tgid = bpf_get_current_pid_tgid();
-    event->pid = pid_tgid >> 32;
+    /* Collect keycode */
     event->code = code;
     event->value = value;
-    bpf_get_current_comm(&event->comm, sizeof(event->comm));
 
     /* Submit event to userspace */
     bpf_ringbuf_submit(event, 0);

