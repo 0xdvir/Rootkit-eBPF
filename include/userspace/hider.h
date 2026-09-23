@@ -2,6 +2,7 @@
 #define __HIDER_H
 
 #include <bpf/libbpf.h>
+
 #include "config.h"
 #include "rootkit.skel.h"
 

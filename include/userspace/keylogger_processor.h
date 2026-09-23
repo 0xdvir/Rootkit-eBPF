@@ -3,8 +3,6 @@
 
 #include <unistd.h>
 
-#define KEYLOGGER_PORT 1338
-
 struct keylogger_ctx {
     int keylogger_socket_fd;
 };
