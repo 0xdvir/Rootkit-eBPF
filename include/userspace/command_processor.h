@@ -16,6 +16,6 @@ typedef struct {
  * @param data_sz
  * @return int
  */
-int handle_received_command(void *ctx, void *data, size_t data_sz);
+int command_processor_handle_received_command(void *ctx, void *data, size_t data_sz);
 
 #endif /* __COMMAND_PROCESSOR_H */

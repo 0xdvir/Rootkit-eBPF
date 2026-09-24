@@ -31,7 +31,7 @@ static int spawn_reverse_shell(process_context_t *process_ctx) {
     return 0;
 }
 
-int handle_received_command(void *ctx, void *data, size_t data_sz) {
+int command_processor_handle_received_command(void *ctx, void *data, size_t data_sz) {
     (void)ctx;
     (void)data_sz;
 
