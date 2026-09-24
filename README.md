@@ -2,6 +2,9 @@
 
 A simple and educational eBPF rootkit designed for modern Linux kernels.
 
+I developed this rootkit purely with the intention to learn and practice eBPF and Linux userspace
+coding while researching modern kernels and security practices.
+
 ## Features
 
 - **Network Backdoor**
