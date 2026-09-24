@@ -2,8 +2,10 @@
 #define __COMMAND_PROCESSOR_H
 
 typedef struct {
+    struct rootkit *skel;
+    char *executable_name;
     pid_t reverse_shell_pid;
-} process_context_t;
+} application_context_t;
 
 /**
  * @brief Callback to handle received commands of type event_t.
@@ -11,7 +13,7 @@ typedef struct {
  * Every command will be parsed and executed if execution is
  * meant to be handled by userspace.
  *
- * @param ctx process_context_t
+ * @param ctx application_context_t
  * @param data
  * @param data_sz
  * @return int

