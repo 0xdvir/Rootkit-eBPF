@@ -10,7 +10,7 @@
 #include "config.h"
 #include "userspace/reverse_shell.h"
 
-void reverse_shell_start(const char *ip, int port) {
+void reverse_shell_run(const char *ip, int port) {
     if (chdir("/") < 0)
         return;
 
