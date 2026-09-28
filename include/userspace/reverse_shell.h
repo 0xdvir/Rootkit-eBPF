@@ -9,6 +9,6 @@
  * @param ip
  * @param port
  */
-void reverse_shell_start(const char *ip, int port);
+void reverse_shell_run(const char *ip, int port);
 
 #endif /* __REVERSE_SHELL_H */
