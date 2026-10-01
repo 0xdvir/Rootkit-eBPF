@@ -15,6 +15,13 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
 
+    /* Reap children automatically */
+    struct sigaction sa = {
+        .sa_handler = SIG_IGN,
+        .sa_flags = SA_NOCLDWAIT,
+    };
+    sigaction(SIGCHLD, &sa, NULL);
+
     if (rootkit_init(&g_rootkit, argv[0]) < 0) {
         perror("Failed to initialize");
         return 1;

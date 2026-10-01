@@ -19,6 +19,8 @@ coding while researching modern kernels and security practices.
   Utilizes fundamental strategies to avoid detection.
 - **Reverse Shell**
   The loader process spawns a reverse shell and the rootkit hides it.
+- **Dynamic Dropper**
+  Can receive an ELF over the network and run it purely from memory without touching the file system.
 
 ## ⚠️ Disclaimer
 

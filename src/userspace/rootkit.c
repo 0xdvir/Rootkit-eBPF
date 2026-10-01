@@ -2,10 +2,10 @@
 
 #include "config.h"
 #include "rootkit.skel.h"
+#include "userspace/rootkit.h"
 #include "userspace/command_processor.h"
 #include "userspace/hider.h"
 #include "userspace/loader.h"
-#include "userspace/rootkit.h"
 
 #define RING_BUFF_POLL_TIMEOUT_MS 100
 

