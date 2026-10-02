@@ -10,7 +10,7 @@ coding while researching modern kernels and security practices.
 - **Network Backdoor** -
   An XDP filter, filtering network packets for magic payloads and parses commands from these packets.
 - **Keylogger** -
-  Kernel level keylogger capturing keyboard input and seding over hidden communication.
+  Kernel level keylogger capturing keyboard input and sending it over hidden communication.
 - **Process and File Hiding** -
   Hiding processes recursively on every fork. Also, hiding files on the file system.
 - **Port hiding** -
@@ -37,7 +37,7 @@ This rootkit operates as a kernel-level backdoor. It sets up an XDP filter to in
 
 Ensure your system meets the following requirements before building:
 
-* **OS:** Linux Kernel `>= 5.8` (requires `fexit` support)
+* **OS:** Linux Kernel `>= 5.17` (requires `bpf_loop()` support)
 
 #### Install Dependencies (Ubuntu / Debian)
 

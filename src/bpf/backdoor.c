@@ -33,7 +33,7 @@ static void unhide_file(char *filename) {
 
 /**
  * @brief Process command struct and execute command according
- * to the corrsponding opcode.
+ * to the corresponding opcode.
  *
  * @param command
  * @return int returns 0 on command opcode identified and ran.

