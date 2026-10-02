@@ -1,3 +1,5 @@
 build/
 include/vmlinux.h
 include/rootkit.skel.h
+.vscode/
+.clang-format

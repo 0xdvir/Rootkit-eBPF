@@ -2,18 +2,25 @@
 
 A simple and educational eBPF rootkit designed for modern Linux kernels.
 
+I developed this rootkit purely with the intention to learn and practice eBPF and Linux userspace
+coding while researching modern kernels and security practices.
+
 ## Features
 
-- **Network Backdoor**
+- **Network Backdoor** -
   An XDP filter, filtering network packets for magic payloads and parses commands from these packets.
-- **Keylogger**
+- **Keylogger** -
   Kernel level keylogger capturing keyboard input and seding over hidden communication.
-- **Process and File Hiding**
+- **Process and File Hiding** -
   Hiding processes recursively on every fork. Also, hiding files on the file system.
-- **Evasion Techniques**
+- **Port hiding** -
+  Hides open ports from tool like ss.
+- **Evasion Techniques** -
   Utilizes fundamental strategies to avoid detection.
-- **Reverse Shell**
+- **Reverse Shell** -
   The loader process spawns a reverse shell and the rootkit hides it.
+- **Dynamic Dropper** -
+  Can receive an ELF over the network and run it purely from memory without touching the file system.
 
 ## ⚠️ Disclaimer
 

