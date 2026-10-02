@@ -4,6 +4,7 @@
 typedef struct {
     int memory_file_fd;
     const char *memory_file_name;
+    uint16_t dropper_port;
 } dropper_context_t;
 
 /**

